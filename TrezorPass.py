@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import sys
 
-from PyQt4.QtGui import QApplication, QMainWindow
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtGui import QApplication, QMainWindow, QMenu
 #from PyQt4.QtCore import QSettings
 
 from ui_mainwindow import Ui_MainWindow
@@ -15,7 +16,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 	def __init__(self):
 		QMainWindow.__init__(self)
 		self.setupUi(self)
-
+		
+		self.addGroupMenu = QtGui.QMenu(self)
+		self.addGroupMenu.addAction(QtGui.QAction('Add group', self))
+		self.addGroupMenu.addAction(QtGui.QAction('Delete group', self))
+		
+		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		self.groupsTree.customContextMenuRequested.connect(self.groupsContextMenu)
+	
+	def groupsContextMenu(self, point):
+		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+		
 class Trezor(object):
 	"""Class for working with Trezor device via HID"""
 	
