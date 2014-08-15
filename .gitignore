@@ -1,0 +1,5 @@
+.*.swp
+*.pyc
+
+ui_*py
+TrezorPass.pro.user
