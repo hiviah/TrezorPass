@@ -31,6 +31,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
+		self.groupsTree.itemClicked.connect(self.loadPasswords)
 		
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
@@ -58,6 +59,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def showPasswdContextMenu(self, point):
 		self.passwdMenu = QtGui.QMenu(self)
 		newItemAction = QtGui.QAction('New item', self)
+		newItemAction.triggered.connect(self.createPassword)
 		deleteItemAction = QtGui.QAction('Delete item', self)
 		self.passwdMenu.addAction(newItemAction)
 		self.passwdMenu.addAction(deleteItemAction)
@@ -65,6 +67,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
 	
 	def createGroup(self):
+		"""Slot to create a password group.
+		"""
 		dialog = AddGroupDialog()
 		if not dialog.exec_():
 			return
@@ -81,6 +85,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		newItem = QtGui.QTreeWidgetItem([groupName])
 		self.groupsTree.addTopLevelItem(newItem)
 		self.pwMap.addGroup(groupName)
+	
+	def createPassword(self):
+		"""Slot to create key-value password pair.
+		"""
+		pass
+	
+	def loadPasswords(self, item):
+		"""Slot that should load items for group that has been clicked on.
+		"""
+		print item.text(0)
+		pass
 	
 class Trezor(object):
 	"""Class for working with Trezor device via HID"""
