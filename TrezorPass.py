@@ -17,16 +17,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 		QMainWindow.__init__(self)
 		self.setupUi(self)
 		
+		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
+		
+		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
+		
+	
+	def showGroupsContextMenu(self, point):
 		self.addGroupMenu = QtGui.QMenu(self)
 		self.addGroupMenu.addAction(QtGui.QAction('Add group', self))
 		self.addGroupMenu.addAction(QtGui.QAction('Delete group', self))
 		
-		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-		self.groupsTree.customContextMenuRequested.connect(self.groupsContextMenu)
-	
-	def groupsContextMenu(self, point):
 		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+	
+	def showPasswdContextMenu(self, point):
+		self.passwdMenu = QtGui.QMenu(self)
+		self.passwdMenu.addAction(QtGui.QAction('New item', self))
+		self.passwdMenu.addAction(QtGui.QAction('Delete item', self))
 		
+		self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
+	
 class Trezor(object):
 	"""Class for working with Trezor device via HID"""
 	
