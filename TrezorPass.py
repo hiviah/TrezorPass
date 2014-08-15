@@ -4,10 +4,20 @@ import sys
 from PyQt4 import QtGui, QtCore
 
 from ui_mainwindow import Ui_MainWindow
+from ui_addgroup_dialog import Ui_AddGroupDialog
 
 from trezorlib.client import TrezorClient
 from trezorlib.transport_hid import HidTransport
 
+class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
+	
+	def __init__(self):
+		QtGui.QDialog.__init__(self)
+		self.setupUi(self)
+	
+	def newGroupName(self):
+		return self.newGroupEdit.text()
+		
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
@@ -21,9 +31,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
 		
-		header0 = QtGui.QTableWidgetItem("", QtGui.QTableWidgetItem.Type);
-		header1 = QtGui.QTableWidgetItem("Key", QtGui.QTableWidgetItem.Type);
-		header2 = QtGui.QTableWidgetItem("Value", QtGui.QTableWidgetItem.Type);
+		header0 = QtGui.QTableWidgetItem("");
+		header1 = QtGui.QTableWidgetItem("Key");
+		header2 = QtGui.QTableWidgetItem("Value");
 		self.passwordTable.setColumnCount(3)
 		self.passwordTable.setHorizontalHeaderItem(0, header0)
 		self.passwordTable.setHorizontalHeaderItem(1, header1)
@@ -32,17 +42,32 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	
 	def showGroupsContextMenu(self, point):
 		self.addGroupMenu = QtGui.QMenu(self)
-		self.addGroupMenu.addAction(QtGui.QAction('Add group', self))
-		self.addGroupMenu.addAction(QtGui.QAction('Delete group', self))
+		newGroupAction = QtGui.QAction('Add group', self)
+		newGroupAction.triggered.connect(self.createGroup)
+		deleteGroupAction = QtGui.QAction('Delete group', self)
+		self.addGroupMenu.addAction(newGroupAction)
+		self.addGroupMenu.addAction(deleteGroupAction)
 		
-		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+		action = self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+			
 	
 	def showPasswdContextMenu(self, point):
 		self.passwdMenu = QtGui.QMenu(self)
-		self.passwdMenu.addAction(QtGui.QAction('New item', self))
-		self.passwdMenu.addAction(QtGui.QAction('Delete item', self))
+		newItemAction = QtGui.QAction('New item', self)
+		deleteItemAction = QtGui.QAction('Delete item', self)
+		self.passwdMenu.addAction(newItemAction)
+		self.passwdMenu.addAction(deleteItemAction)
 		
 		self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
+	
+	def createGroup(self):
+		dialog = AddGroupDialog()
+		if not dialog.exec_():
+			return
+		
+		groupName = dialog.newGroupName()
+		newItem = QtGui.QTreeWidgetItem([groupName])
+		self.groupsTree.addTopLevelItem(newItem)
 	
 class Trezor(object):
 	"""Class for working with Trezor device via HID"""
@@ -109,7 +134,7 @@ class Trezor(object):
 trezor = Trezor()
 trezorChooseCallback = lambda deviceTuples: 0
 client = trezor.getDevice(trezorChooseCallback)
-print "label:", client.features.label
+#print "label:", client.features.label
 
 app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow()
