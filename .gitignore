@@ -1,5 +1,7 @@
 .*.swp
 *.pyc
+*.kpf
 
 ui_*py
 TrezorPass.pro.user
+trezorlib
