@@ -9,6 +9,8 @@ from ui_addgroup_dialog import Ui_AddGroupDialog
 from trezorlib.client import TrezorClient
 from trezorlib.transport_hid import HidTransport
 
+import password_map
+
 class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 	
 	def __init__(self):
@@ -21,9 +23,11 @@ class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
-	def __init__(self):
+	def __init__(self, pwMap):
 		QtGui.QMainWindow.__init__(self)
 		self.setupUi(self)
+		
+		self.pwMap = pwMap
 		
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
@@ -48,7 +52,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.addGroupMenu.addAction(newGroupAction)
 		self.addGroupMenu.addAction(deleteGroupAction)
 		
-		action = self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
 			
 	
 	def showPasswdContextMenu(self, point):
@@ -66,8 +70,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			return
 		
 		groupName = dialog.newGroupName()
+		if not groupName:
+			return
+		
+		if groupName in self.pwMap.groups:
+			msgBox = QtGui.QMessageBox(text="Group already exists")
+			msgBox.exec_()
+			return
+		
 		newItem = QtGui.QTreeWidgetItem([groupName])
 		self.groupsTree.addTopLevelItem(newItem)
+		self.pwMap.addGroup(groupName)
 	
 class Trezor(object):
 	"""Class for working with Trezor device via HID"""
@@ -131,12 +144,14 @@ class Trezor(object):
 		
 
 
+pwMap = password_map.PasswordMap()
+
 trezor = Trezor()
 trezorChooseCallback = lambda deviceTuples: 0
 client = trezor.getDevice(trezorChooseCallback)
 #print "label:", client.features.label
 
 app = QtGui.QApplication(sys.argv)
-mainWindow = MainWindow()
+mainWindow = MainWindow(pwMap)
 mainWindow.show()
 sys.exit(app.exec_())
