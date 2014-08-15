@@ -2,19 +2,17 @@
 import sys
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QApplication, QMainWindow, QMenu
-#from PyQt4.QtCore import QSettings
 
 from ui_mainwindow import Ui_MainWindow
 
 from trezorlib.client import TrezorClient
 from trezorlib.transport_hid import HidTransport
 
-class MainWindow(QMainWindow, Ui_MainWindow):
+class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
 	def __init__(self):
-		QMainWindow.__init__(self)
+		QtGui.QMainWindow.__init__(self)
 		self.setupUi(self)
 		
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -22,6 +20,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 		
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
+		
+		header0 = QtGui.QTableWidgetItem("", QtGui.QTableWidgetItem.Type);
+		header1 = QtGui.QTableWidgetItem("Key", QtGui.QTableWidgetItem.Type);
+		header2 = QtGui.QTableWidgetItem("Value", QtGui.QTableWidgetItem.Type);
+		self.passwordTable.setColumnCount(3)
+		self.passwordTable.setHorizontalHeaderItem(0, header0)
+		self.passwordTable.setHorizontalHeaderItem(1, header1)
+		self.passwordTable.setHorizontalHeaderItem(2, header2)
 		
 	
 	def showGroupsContextMenu(self, point):
@@ -105,7 +111,7 @@ trezorChooseCallback = lambda deviceTuples: 0
 client = trezor.getDevice(trezorChooseCallback)
 print "label:", client.features.label
 
-app = QApplication(sys.argv)
+app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow()
 mainWindow.show()
 sys.exit(app.exec_())
