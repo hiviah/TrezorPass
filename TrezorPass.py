@@ -166,13 +166,15 @@ trezor = trezorChooser.getDevice(trezorChooseCallback)
 #print "label:", trezor.features.label
 
 pwMap = password_map.PasswordMap(trezor)
-pwMap.outerKey = "test____asdfzxcv"
-wrapped = pwMap.wrapKey(pwMap.outerKey)
-print wrapped.encode("hex")
-unwrapped = pwMap.unwrapKey(wrapped)
-print unwrapped
+#pwMap.load("trezorpass.pwdb")
+pwMap.outerIv = os.urandom(16)
+pwMap.outerKey = os.urandom(32)
 
 app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow(pwMap)
 mainWindow.show()
-sys.exit(app.exec_())
+retCode = app.exec_()
+
+pwMap.save("trezorpass.pwdb")
+
+sys.exit(retCode)
