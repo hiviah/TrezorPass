@@ -2,6 +2,7 @@ import struct
 import cPickle
 import hmac
 import hashlib
+import os
 
 from Crypto.Cipher import AES
 
@@ -11,7 +12,11 @@ from Crypto.Cipher import AES
 # 16 bytes	IV
 #  4 bytes	size of data following (N)
 #  N bytes	AES-CBC encrypted blob containing pickled structure for password map
-# 32 bytes	HMAC-SHA256 over data with wrappedOuterKey
+# 32 bytes	HMAC-SHA256 over data with same key as AES-CBC data struct above
+
+BLOCKSIZE = 16
+MACSIZE = 32
+KEYSIZE = 32
 
 class Magic(object):
 	"""
@@ -29,7 +34,7 @@ class Padding(object):
 	"""
 	PKCS#5 Padding for block cipher having 16-byte blocks
 	"""
-	BS = 16 #blocksize
+	BS = BLOCKSIZE
 	pad = lambda s: s + (Padding.BS - len(s) % Padding.BS) * chr(Padding.BS - len(s) % Padding.BS)
 	unpad = lambda s : s[0:-ord(s[-1])]
 	
@@ -61,14 +66,14 @@ class PasswordMap(object):
 		@throws IOError: if reading file failed
 		"""
 		with file(fname) as f:
-			wrappedKey = f.read(32)
-			if len(wrappedKey) != 32:
+			wrappedKey = f.read(KEYSIZE)
+			if len(wrappedKey) != KEYSIZE:
 				raise IOError("Corrupted disk format - bad wrapped key length")
 			
 			self.outerKey = self.unwrapKey(wrappedKey)
 			
-			self.outerIv = f.read(16)
-			if len(self.outerIv) != 16:
+			self.outerIv = f.read(BLOCKSIZE)
+			if len(self.outerIv) != BLOCKSIZE:
 				raise IOError("Corrupted disk format - bad IV length")
 			
 			ls = f.read(4)
@@ -80,8 +85,8 @@ class PasswordMap(object):
 			if len(encrypted) != l:
 				raise IOError("Corrupted disk format - not enough data bytes")
 			
-			hmacDigest = f.read(32)
-			if len(hmacDigest) != 32:
+			hmacDigest = f.read(MACSIZE)
+			if len(hmacDigest) != MACSIZE:
 				raise IOError("Corrupted disk format - HMAC not complete")
 			
 			#time-invariant HMAC comparison that also works with python 2.6
@@ -102,8 +107,8 @@ class PasswordMap(object):
 		
 		@throws IOError: if writing file failed
 		"""
-		assert len(self.outerKey) == 32
-		assert len(self.outerIv) == 16
+		assert len(self.outerKey) == KEYSIZE
+		self.outerIv = os.urandom(BLOCKSIZE)
 		wrappedKey = self.wrapKey(self.outerKey)
 		
 		with file(fname, "wb") as f:
