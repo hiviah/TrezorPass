@@ -35,8 +35,14 @@ class Padding(object):
 	PKCS#5 Padding for block cipher having 16-byte blocks
 	"""
 	BS = BLOCKSIZE
-	pad = lambda s: s + (Padding.BS - len(s) % Padding.BS) * chr(Padding.BS - len(s) % Padding.BS)
-	unpad = lambda s : s[0:-ord(s[-1])]
+	
+	@staticmethod
+	def pad(s):
+		return s + (Padding.BS - len(s) % Padding.BS) * chr(Padding.BS - len(s) % Padding.BS)
+	
+	@staticmethod
+	def unpad(s):
+		return s[0:-ord(s[-1])]
 	
 class PasswordGroup(object):
 	pass
@@ -97,7 +103,7 @@ class PasswordMap(object):
 			if hmacCompare != 0:
 				raise IOError("Corrupted disk format - HMAC does not match")
 				
-			serialized = encrypted #TODO: AES-CBC
+			serialized = self.decryptOuter(encrypted, self.outerIv)
 			self.groups = cPickle.loads(serialized)
 	
 	def save(self, fname):
@@ -115,7 +121,7 @@ class PasswordMap(object):
 			f.write(wrappedKey)
 			f.write(self.outerIv)
 			serialized = cPickle.dumps(self.groups)
-			encrypted = serialized #todo AES-CBC
+			encrypted = self.encryptOuter(serialized, self.outerIv)
 			
 			hmacDigest = hmac.new(self.outerKey, encrypted, hashlib.sha256).digest()
 			l = struct.pack("!I", len(encrypted))
@@ -125,6 +131,35 @@ class PasswordMap(object):
 			
 			f.flush()
 			f.close()
+			
+	def encryptOuter(self, plaintext, iv):
+		"""
+		Pad and encrypt with self.outerKey
+		"""
+		return self.encrypt(plaintext, iv, self.outerKey)
+	
+	def encrypt(self, plaintext, iv, key):
+		"""
+		Pad plaintext with PKCS#5 and encrypt it.
+		"""
+		cipher = AES.new(key, AES.MODE_CBC, iv)
+		padded = Padding.pad(plaintext)
+		return cipher.encrypt(padded)
+	
+	def decryptOuter(self, ciphertext, iv):
+		"""
+		Decrypt with self.outerKey and unpad
+		"""
+		return self.decrypt(ciphertext, iv, self.outerKey)
+		
+	def decrypt(self, ciphertext, iv, key):
+		"""
+		Decrypt ciphertext, unpad it and return
+		"""
+		cipher = AES.new(key, AES.MODE_CBC, iv)
+		plaintext = cipher.decrypt(ciphertext)
+		unpadded = Padding.unpad(plaintext)
+		return unpadded
 	
 	def unwrapKey(self, wrappedOuterKey):
 		"""
