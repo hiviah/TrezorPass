@@ -78,7 +78,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		if not groupName:
 			return
 		
-		if groupName in self.pwMap.groups:
+		if str(groupName) in self.pwMap.groups:
 			msgBox = QtGui.QMessageBox(text="Group already exists")
 			msgBox.exec_()
 			return
