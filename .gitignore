@@ -5,3 +5,6 @@
 ui_*py
 TrezorPass.pro.user
 trezorlib
+*pwdb
+
+Crypto
