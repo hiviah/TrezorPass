@@ -97,7 +97,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		print item.text(0)
 		pass
 	
-class Trezor(object):
+class TrezorChooser(object):
 	"""Class for working with Trezor device via HID"""
 	
 	def __init__(self):
@@ -161,10 +161,10 @@ class Trezor(object):
 
 pwMap = password_map.PasswordMap()
 
-trezor = Trezor()
+trezorChooser = TrezorChooser()
 trezorChooseCallback = lambda deviceTuples: 0
-client = trezor.getDevice(trezorChooseCallback)
-#print "label:", client.features.label
+trezor = trezorChooser.getDevice(trezorChooseCallback)
+print "label:", trezor.features.label
 
 app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow(pwMap)
