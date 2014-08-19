@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 
 from PyQt4 import QtGui, QtCore
 
@@ -159,12 +160,17 @@ class TrezorChooser(object):
 		
 
 
-pwMap = password_map.PasswordMap()
-
 trezorChooser = TrezorChooser()
 trezorChooseCallback = lambda deviceTuples: 0
 trezor = trezorChooser.getDevice(trezorChooseCallback)
-print "label:", trezor.features.label
+#print "label:", trezor.features.label
+
+pwMap = password_map.PasswordMap(trezor)
+pwMap.outerKey = "test____asdfzxcv"
+wrapped = pwMap.wrapKey(pwMap.outerKey)
+print wrapped.encode("hex")
+unwrapped = pwMap.unwrapKey(wrapped)
+print unwrapped
 
 app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow(pwMap)
