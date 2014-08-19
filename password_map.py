@@ -1,5 +1,7 @@
 import struct
 import cPickle
+import hmac
+import hashlib
 
 from Crypto.Cipher import AES
 
@@ -8,8 +10,8 @@ from Crypto.Cipher import AES
 # 32 bytes	AES-CBC-encrypted wrappedOuterKey
 # 16 bytes	IV
 #  4 bytes	size of data following (N)
-#  N bytes	AES-GCM encrypted blob containing pickled structure for password map
-# 16 bytes	GMAC
+#  N bytes	AES-CBC encrypted blob containing pickled structure for password map
+# 32 bytes	HMAC-SHA256 over data with wrappedOuterKey
 
 class Magic(object):
 	"""
@@ -19,7 +21,7 @@ class Magic(object):
 	u = lambda fmt, s: struct.unpack(fmt, s)[0]
 	hdr = u("!I", "TZPW")
 	
-	unlockNode = [hdr, u("!I", "ULCK")] # for unlocking wrapped AES-GCM key
+	unlockNode = [hdr, u("!I", "ULCK")] # for unlocking wrapped AES-CBC key
 	groupNode  = [hdr, u("!I", "GRUP")] # for generating keys for individual password groups
 	unlockKey = "TrezorPassMasterKey" # string to derive wrapping key from
 	
@@ -41,7 +43,7 @@ class PasswordMap(object):
 		assert trezor is not None
 		self.groups = {}
 		self.trezor = trezor
-		self.outerKey = None # outer AES-GCM key
+		self.outerKey = None # outer AES-CBC key
 		self.outerIv = None  # IV for data blob encrypted with outerKey
 	
 	def addGroup(self, groupName):
@@ -78,7 +80,19 @@ class PasswordMap(object):
 			if len(encrypted) != l:
 				raise IOError("Corrupted disk format - not enough data bytes")
 			
-			serialized = encrypted #TODO: AES-GCM
+			hmacDigest = f.read(32)
+			if len(hmacDigest) != 32:
+				raise IOError("Corrupted disk format - HMAC not complete")
+			
+			#time-invariant HMAC comparison that also works with python 2.6
+			newHmacDigest = hmac.new(self.outerKey, encrypted, hashlib.sha256).digest()
+			hmacCompare = 0
+			for (ch1, ch2) in zip(hmacDigest, newHmacDigest):
+				hmacCompare |= int(ch1 != ch2)
+			if hmacCompare != 0:
+				raise IOError("Corrupted disk format - HMAC does not match")
+				
+			serialized = encrypted #TODO: AES-CBC
 			self.groups = cPickle.loads(serialized)
 	
 	def save(self, fname):
@@ -96,16 +110,20 @@ class PasswordMap(object):
 			f.write(wrappedKey)
 			f.write(self.outerIv)
 			serialized = cPickle.dumps(self.groups)
-			encrypted = serialized #todo AES-GCM
+			encrypted = serialized #todo AES-CBC
+			
+			hmacDigest = hmac.new(self.outerKey, encrypted, hashlib.sha256).digest()
 			l = struct.pack("!I", len(encrypted))
 			f.write(l)
 			f.write(encrypted)
+			f.write(hmacDigest)
+			
 			f.flush()
 			f.close()
 	
 	def unwrapKey(self, wrappedOuterKey):
 		"""
-		Decrypt wrapped AES-GCM key using Trezor.
+		Decrypt wrapped outer key using Trezor.
 		"""
 		ret = self.trezor.decrypt_keyvalue(Magic.unlockNode, Magic.unlockKey, wrappedOuterKey, ask_on_encrypt=False, ask_on_decrypt=True)
 		return ret

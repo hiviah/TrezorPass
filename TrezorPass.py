@@ -176,5 +176,6 @@ mainWindow.show()
 retCode = app.exec_()
 
 pwMap.save("trezorpass.pwdb")
+pwMap.load("trezorpass.pwdb")
 
 sys.exit(retCode)
