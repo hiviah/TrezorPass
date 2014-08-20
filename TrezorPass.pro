@@ -16,4 +16,5 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h
 
 FORMS    += mainwindow.ui \
-    addgroup_dialog.ui
+    addgroup_dialog.ui \
+    trezor_passphrase_dialog.ui
