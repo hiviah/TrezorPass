@@ -189,6 +189,7 @@ pwMap = password_map.PasswordMap(trezor)
 #pwMap.load("trezorpass.pwdb")
 pwMap.outerIv = os.urandom(16)
 pwMap.outerKey = os.urandom(32)
+pwMap.encryptedBackupKey = ""
 
 app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow(pwMap)

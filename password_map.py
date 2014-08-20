@@ -10,6 +10,8 @@ from Crypto.Cipher import AES
 #
 # 32 bytes	AES-CBC-encrypted wrappedOuterKey
 # 16 bytes	IV
+#  2 bytes	backup private key size (B)
+#  B bytes	encrypted backup key
 #  4 bytes	size of data following (N)
 #  N bytes	AES-CBC encrypted blob containing pickled structure for password map
 # 32 bytes	HMAC-SHA256 over data with same key as AES-CBC data struct above
@@ -56,6 +58,7 @@ class PasswordMap(object):
 		self.trezor = trezor
 		self.outerKey = None # outer AES-CBC key
 		self.outerIv = None  # IV for data blob encrypted with outerKey
+		self.encryptedBackupKey = None
 	
 	def addGroup(self, groupName):
 		groupName = str(groupName)
@@ -81,6 +84,15 @@ class PasswordMap(object):
 			self.outerIv = f.read(BLOCKSIZE)
 			if len(self.outerIv) != BLOCKSIZE:
 				raise IOError("Corrupted disk format - bad IV length")
+			
+			lb = f.read(2)
+			if len(lb) != 2:
+				raise IOError("Corrupted disk format - bad backup key length")
+			lb = struct.unpack("!H", lb)[0]
+			
+			self.encryptedBackupKey = f.read(lb)
+			if len(self.encryptedBackupKey) != lb:
+				raise IOError("Corrupted disk format - not enough encrypted backup key bytes")
 			
 			ls = f.read(4)
 			if len(ls) != 4:
@@ -124,6 +136,9 @@ class PasswordMap(object):
 			encrypted = self.encryptOuter(serialized, self.outerIv)
 			
 			hmacDigest = hmac.new(self.outerKey, encrypted, hashlib.sha256).digest()
+			lb = struct.pack("!H", len(self.encryptedBackupKey))
+			f.write(lb)
+			f.write(self.encryptedBackupKey)
 			l = struct.pack("!I", len(encrypted))
 			f.write(l)
 			f.write(encrypted)
