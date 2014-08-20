@@ -183,6 +183,7 @@ class TrezorChooser(object):
 trezorChooser = TrezorChooser()
 trezorChooseCallback = lambda deviceTuples: 0
 trezor = trezorChooser.getDevice(trezorChooseCallback)
+trezor.clear_session()
 #print "label:", trezor.features.label
 
 pwMap = password_map.PasswordMap(trezor)
