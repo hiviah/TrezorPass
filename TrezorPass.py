@@ -6,10 +6,13 @@ from PyQt4 import QtGui, QtCore
 
 from trezorlib.client import BaseClient, ProtocolMixin
 from trezorlib.transport_hid import HidTransport
+from trezorlib import messages_pb2 as proto
 
 from ui_mainwindow import Ui_MainWindow
 
 import password_map
+
+from dialogs import AddGroupDialog, TrezorPassphraseDialog
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
@@ -93,12 +96,19 @@ class QtTrezorMixin(object):
 	Mixin for input of passhprases.
 	"""
 	
-	def __init__(self):
-		pass
+	def __init__(self, *args, **kwargs):
+		super(QtTrezorMixin, self).__init__(*args, **kwargs)
 	
+	def callback_ButtonRequest(self, msg):
+		return proto.ButtonAck()
+
 	def callback_PassphraseRequest(self, msg):
-		passphrase = raw_input()
-		passphrase = unicode(str(bytearray(passphrase, 'utf-8')), 'utf-8')
+		dialog = TrezorPassphraseDialog()
+		if not dialog.exec_():
+			passphrase = u""
+		else:
+			passphrase = dialog.passphraseEdit.text()
+			passphrase = unicode(passphrase)
 		
 		return proto.PassphraseAck(passphrase=passphrase)
 
@@ -155,7 +165,7 @@ class TrezorChooser(object):
 		for idx, device in enumerate(devices):
 			try:
 				transport = HidTransport(devices[0])
-				client = TrezorClient(transport)
+				client = QtTrezorClient(transport)
 				label = client.features.label and client.features.label or "<no label>"
 				deviceTuples += [(idx, label)]
 			except IOError:

@@ -13,7 +13,7 @@ class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 		return self.newGroupEdit.text()
 		
 	
-class TrezorPassphraseDialog(QtGui.Dialog, Ui_TrezorPassphraseDialog):
+class TrezorPassphraseDialog(QtGui.QDialog, Ui_TrezorPassphraseDialog):
 	
 	def __init__(self):
 		QtGui.QDialog.__init__(self)
