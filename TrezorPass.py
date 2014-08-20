@@ -4,23 +4,13 @@ import os
 
 from PyQt4 import QtGui, QtCore
 
-from ui_mainwindow import Ui_MainWindow
-from ui_addgroup_dialog import Ui_AddGroupDialog
-
-from trezorlib.client import TrezorClient
+from trezorlib.client import BaseClient, ProtocolMixin
 from trezorlib.transport_hid import HidTransport
+
+from ui_mainwindow import Ui_MainWindow
 
 import password_map
 
-class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
-	
-	def __init__(self):
-		QtGui.QDialog.__init__(self)
-		self.setupUi(self)
-	
-	def newGroupName(self):
-		return self.newGroupEdit.text()
-		
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
@@ -98,6 +88,26 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		print item.text(0)
 		pass
 	
+class QtTrezorMixin(object):
+	"""
+	Mixin for input of passhprases.
+	"""
+	
+	def __init__(self):
+		pass
+	
+	def callback_PassphraseRequest(self, msg):
+		passphrase = raw_input()
+		passphrase = unicode(str(bytearray(passphrase, 'utf-8')), 'utf-8')
+		
+		return proto.PassphraseAck(passphrase=passphrase)
+
+class QtTrezorClient(ProtocolMixin, QtTrezorMixin, BaseClient):
+	"""
+	Trezor client with Qt input methods
+	"""
+	pass
+
 class TrezorChooser(object):
 	"""Class for working with Trezor device via HID"""
 	
@@ -115,7 +125,7 @@ class TrezorChooser(object):
 			return None
 		
 		transport = self.chooseDevice(devices, callback)
-		client = TrezorClient(transport)
+		client = QtTrezorClient(transport)
 
 		return client
 
