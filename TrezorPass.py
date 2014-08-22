@@ -79,9 +79,14 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsTree.addTopLevelItem(newItem)
 		self.pwMap.addGroup(groupName)
 		
+		#Make item's passwords loaded so new key-value pairs can be created
+		#right away - better from UX perspective.
+		self.loadPasswords(newItem)
+
 		#make new item selected to save a few clicks
-		#self.groupsTree.selectionModel().select(next_index,
-		#	QtGui.QItemSelectionModel.ClearAndSelect | QtGuiQItemSelectionModel.Rows)
+		itemIdx = self.groupsTree.indexFromItem(newItem)
+		self.groupsTree.selectionModel().select(itemIdx,
+			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
 	
 	def createPassword(self):
 		"""Slot to create key-value password pair.
