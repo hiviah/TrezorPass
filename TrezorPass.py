@@ -51,6 +51,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.addGroupMenu.addAction(newGroupAction)
 		self.addGroupMenu.addAction(deleteGroupAction)
 		
+		#disable deleting if no point is clicked on
+		item = self.groupsTree.itemAt(point.x(), point.y())
+		if item is None:
+			deleteGroupAction.setEnabled(False)
+		
 		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
 			
 	
@@ -66,6 +71,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		deleteItemAction = QtGui.QAction('Delete item', self)
 		self.passwdMenu.addAction(newItemAction)
 		self.passwdMenu.addAction(deleteItemAction)
+		
+		#disable deleting if no point is clicked on
+		item = self.passwordTable.itemAt(point.x(), point.y())
+		if item is None:
+			deleteItemAction.setEnabled(False)
 		
 		self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
 	
