@@ -47,7 +47,12 @@ class Padding(object):
 		return s[0:-ord(s[-1])]
 	
 class PasswordGroup(object):
-	pass
+	
+	def __init__(self):
+		self.pairs = []
+	
+	def addPair(self, key, encryptedValue):
+		self.pairs.append((key, encryptedValue))
 
 class PasswordMap(object):
 	"""Storage of groups of passwords in memory"""

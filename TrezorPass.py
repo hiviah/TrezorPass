@@ -12,7 +12,7 @@ from ui_mainwindow import Ui_MainWindow
 
 import password_map
 
-from dialogs import AddGroupDialog, TrezorPassphraseDialog
+from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
@@ -22,6 +22,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.setupUi(self)
 		
 		self.pwMap = pwMap
+		self.selectedGroup = None
 		
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
@@ -30,13 +31,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
 		
-		header0 = QtGui.QTableWidgetItem("");
-		header1 = QtGui.QTableWidgetItem("Key");
-		header2 = QtGui.QTableWidgetItem("Value");
-		self.passwordTable.setColumnCount(3)
-		self.passwordTable.setHorizontalHeaderItem(0, header0)
-		self.passwordTable.setHorizontalHeaderItem(1, header1)
-		self.passwordTable.setHorizontalHeaderItem(2, header2)
+		headerKey = QtGui.QTableWidgetItem("Key");
+		headerValue = QtGui.QTableWidgetItem("Value");
+		self.passwordTable.setColumnCount(2)
+		self.passwordTable.setHorizontalHeaderItem(0, headerKey)
+		self.passwordTable.setHorizontalHeaderItem(1, headerValue)
 		
 	
 	def showGroupsContextMenu(self, point):
@@ -83,13 +82,36 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def createPassword(self):
 		"""Slot to create key-value password pair.
 		"""
-		pass
+		if self.selectedGroup is None:
+			return
+		group = self.pwMap.groups[self.selectedGroup]
+		dialog = AddPasswordDialog()
+		if not dialog.exec_():
+			return
+		
+		rowCount = self.passwordTable.rowCount()
+		self.passwordTable.setRowCount(rowCount+1)
+		item = QtGui.QTableWidgetItem(dialog.key())
+		self.passwordTable.setItem(rowCount, 0, item)
+		
+		value = str(dialog.pw1())
+		group.addPair(str(key), str())
 	
 	def loadPasswords(self, item):
 		"""Slot that should load items for group that has been clicked on.
 		"""
-		print item.text(0)
-		pass
+		#self.passwordTable.clear()
+		name = str(item.text(0))
+		self.selectedGroup = name
+		group = self.pwMap.groups[name]
+		self.passwordTable.setRowCount(len(group.pairs))
+		self.passwordTable.setColumnCount(2)
+		
+		i = 0
+		for key, encValue in group.pairs:
+			item = QtGui.QTableWidgetItem(key)
+			self.passwordTable.setItem(i, 0, item)
+			i = i+1
 	
 class QtTrezorMixin(object):
 	"""
@@ -197,7 +219,7 @@ mainWindow = MainWindow(pwMap)
 mainWindow.show()
 retCode = app.exec_()
 
-pwMap.save("trezorpass.pwdb")
-pwMap.load("trezorpass.pwdb")
+#pwMap.save("trezorpass.pwdb")
+#pwMap.load("trezorpass.pwdb")
 
 sys.exit(retCode)

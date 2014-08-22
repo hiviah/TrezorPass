@@ -103,7 +103,14 @@
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QTableWidget" name="passwordTable"/>
+         <widget class="QTableWidget" name="passwordTable">
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="dragEnabled">
+           <bool>false</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
