@@ -17,4 +17,5 @@ HEADERS  += mainwindow.h
 
 FORMS    += mainwindow.ui \
     addgroup_dialog.ui \
-    trezor_passphrase_dialog.ui
+    trezor_passphrase_dialog.ui \
+    add_password_dialog.ui
