@@ -78,6 +78,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		newItem = QtGui.QTreeWidgetItem([groupName])
 		self.groupsTree.addTopLevelItem(newItem)
 		self.pwMap.addGroup(groupName)
+		
+		#make new item selected to save a few clicks
+		#self.groupsTree.selectionModel().select(next_index,
+		#	QtGui.QItemSelectionModel.ClearAndSelect | QtGuiQItemSelectionModel.Rows)
 	
 	def createPassword(self):
 		"""Slot to create key-value password pair.
@@ -92,10 +96,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		rowCount = self.passwordTable.rowCount()
 		self.passwordTable.setRowCount(rowCount+1)
 		item = QtGui.QTableWidgetItem(dialog.key())
+		pwItem = QtGui.QTableWidgetItem("*****")
 		self.passwordTable.setItem(rowCount, 0, item)
+		self.passwordTable.setItem(rowCount, 1, pwItem)
 		
-		value = str(dialog.pw1())
-		group.addPair(str(key), str())
+		plainPw = str(dialog.pw1())
+		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
+		group.addPair(str(dialog.key()), encPw)
 	
 	def loadPasswords(self, item):
 		"""Slot that should load items for group that has been clicked on.
@@ -110,7 +117,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		i = 0
 		for key, encValue in group.pairs:
 			item = QtGui.QTableWidgetItem(key)
+			pwItem = QtGui.QTableWidgetItem("*****")
 			self.passwordTable.setItem(i, 0, item)
+			self.passwordTable.setItem(i, 1, pwItem)
 			i = i+1
 	
 class QtTrezorMixin(object):
@@ -127,7 +136,7 @@ class QtTrezorMixin(object):
 	def callback_PassphraseRequest(self, msg):
 		dialog = TrezorPassphraseDialog()
 		if not dialog.exec_():
-			passphrase = u""
+			sys.exit(3)
 		else:
 			passphrase = dialog.passphraseEdit.text()
 			passphrase = unicode(passphrase)

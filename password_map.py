@@ -195,4 +195,31 @@ class PasswordMap(object):
 		ret = self.trezor.encrypt_keyvalue(Magic.unlockNode, Magic.unlockKey, keyToWrap, ask_on_encrypt=False, ask_on_decrypt=True)
 		return ret
 		
+	def encryptPassword(self, password, groupName):
+		"""
+		Encrypt a password. Does PKCS#5 padding before encryption. Inserts
+		random block of data to sidestep IV issue in CipherKeyValue in
+		Trezor.
+		
+		@param groupName key that will be shown to user on Trezor and
+			used to encrypt the password
+		"""
+		rndBlock = os.urandom(BLOCKSIZE)
+		padded = Padding.pad(rndBlock + password)
+		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, groupName, padded, ask_on_encrypt=False, ask_on_decrypt=True)
+		return ret
+		
+	def decryptPassword(self, encryptedPassword, groupName):
+		"""
+		Decrypt a password. After decryption strips PKCS#5 padding and
+		discards first block.
+		
+		@param groupName key that will be shown to user on Trezor and
+			was used to encrypt the password
+		"""
+		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, groupName, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
+		prefixed = Padding.unpad(plain)
+		password = plain[BLOCKSIZE:]
+		return ret
+		
 		
