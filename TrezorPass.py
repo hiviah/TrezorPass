@@ -226,9 +226,17 @@ class TrezorChooser(object):
 		
 
 
+app = QtGui.QApplication(sys.argv)
+
 trezorChooser = TrezorChooser()
 trezorChooseCallback = lambda deviceTuples: 0
 trezor = trezorChooser.getDevice(trezorChooseCallback)
+
+if trezor is None:
+	msgBox = QtGui.QMessageBox(text="No available Trezor found, quitting.")
+	msgBox.exec_()
+	sys.exit(1)
+	
 trezor.clear_session()
 #print "label:", trezor.features.label
 
@@ -238,7 +246,6 @@ pwMap.outerIv = os.urandom(16)
 pwMap.outerKey = os.urandom(32)
 pwMap.encryptedBackupKey = ""
 
-app = QtGui.QApplication(sys.argv)
 mainWindow = MainWindow(pwMap)
 mainWindow.show()
 retCode = app.exec_()
