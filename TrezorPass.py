@@ -27,6 +27,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
 		self.groupsTree.itemClicked.connect(self.loadPasswords)
+		self.groupsTree.itemSelectionChanged.connect(self.loadPasswordsBySelection)
 		
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
@@ -46,7 +47,6 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		"""
 		self.addGroupMenu = QtGui.QMenu(self)
 		newGroupAction = QtGui.QAction('Add group', self)
-		newGroupAction.triggered.connect(self.createGroup)
 		deleteGroupAction = QtGui.QAction('Delete group', self)
 		self.addGroupMenu.addAction(newGroupAction)
 		self.addGroupMenu.addAction(deleteGroupAction)
@@ -56,7 +56,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		if item is None:
 			deleteGroupAction.setEnabled(False)
 		
-		self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+		action = self.addGroupMenu.exec_(self.groupsTree.mapToGlobal(point))
+		
+		if action == newGroupAction:
+			self.createGroup()
+		elif action == deleteGroupAction:
+			self.deleteGroup(item)
 			
 	
 	def showPasswdContextMenu(self, point):
@@ -71,6 +76,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		deleteItemAction = QtGui.QAction('Delete item', self)
 		self.passwdMenu.addAction(newItemAction)
 		self.passwdMenu.addAction(deleteItemAction)
+		
+		#disable creating if no group is selected
+		if self.selectedGroup is None:
+			newItemAction.setEnabled(False)
 		
 		#disable deleting if no point is clicked on
 		item = self.passwordTable.itemAt(point.x(), point.y())
@@ -107,6 +116,15 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		itemIdx = self.groupsTree.indexFromItem(newItem)
 		self.groupsTree.selectionModel().select(itemIdx,
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
+	
+	def deleteGroup(self, item):
+		name = str(item.text(0))
+		self.selectedGroup = None
+		del self.pwMap.groups[name]
+		
+		itemIdx = self.groupsTree.indexOfTopLevelItem(item)
+		self.groupsTree.takeTopLevelItem(itemIdx)
+		self.passwordTable.setRowCount(0)
 	
 	def createPassword(self):
 		"""Slot to create key-value password pair.
@@ -146,6 +164,15 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			self.passwordTable.setItem(i, 0, item)
 			self.passwordTable.setItem(i, 1, pwItem)
 			i = i+1
+	
+	def loadPasswordsBySelection(self):
+		selectedItems = self.groupsTree.selectedItems()
+		
+		if len(selectedItems) < 1:
+			return
+		
+		item = selectedItems[0]
+		self.loadPasswords(item)
 	
 class QtTrezorMixin(object):
 	"""
