@@ -39,6 +39,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 	
 	def showGroupsContextMenu(self, point):
+		"""
+		Show context menu for group management.
+		
+		@param point: point in self.groupsTree where click occured
+		"""
 		self.addGroupMenu = QtGui.QMenu(self)
 		newGroupAction = QtGui.QAction('Add group', self)
 		newGroupAction.triggered.connect(self.createGroup)
@@ -50,6 +55,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			
 	
 	def showPasswdContextMenu(self, point):
+		"""
+		Show context menu for password management
+		
+		@param point: point in self.passwordTable where click occured
+		"""
 		self.passwdMenu = QtGui.QMenu(self)
 		newItemAction = QtGui.QAction('New item', self)
 		newItemAction.triggered.connect(self.createPassword)
