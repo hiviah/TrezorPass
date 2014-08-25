@@ -96,7 +96,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		if action == newItemAction:
 			self.createPassword()
 		elif action == deleteItemAction:
-			self.detelePassword(item)
+			self.deletePassword(item)
 		elif action == showPasswordAction:
 			self.showPassword(item)
 			
@@ -124,7 +124,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
 	
 	def deletePassword(self, item):
-		pass
+		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
+		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+		res = msgBox.exec_()
+		
+		if res != QtGui.QMessageBox.Yes:
+			return
+		
+		row = self.passwordTable.row(item)
+		self.passwordTable.removeRow(row)
+		group = self.pwMap.groups[self.selectedGroup]
+		group.removePair(row)
 	
 	def showPassword(self, item):
 		#check if this password has been decrypted, use cached version

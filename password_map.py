@@ -52,9 +52,15 @@ class PasswordGroup(object):
 		self.pairs = []
 	
 	def addPair(self, key, encryptedValue):
+		"""Add key-value pair"""
 		self.pairs.append((key, encryptedValue))
 	
+	def removePair(self, idx):
+		"""Remove pair at given index"""
+		self.pairs.pop(idx)
+		
 	def pair(self, idx):
+		"""Return pair with given index"""
 		return self.pairs[idx]
 
 class PasswordMap(object):
