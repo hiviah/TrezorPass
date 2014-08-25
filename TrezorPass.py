@@ -104,18 +104,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def createGroup(self):
 		"""Slot to create a password group.
 		"""
-		dialog = AddGroupDialog()
+		dialog = AddGroupDialog(self.pwMap.groups)
 		if not dialog.exec_():
 			return
 		
 		groupName = dialog.newGroupName()
-		if not groupName:
-			return
-		
-		if str(groupName) in self.pwMap.groups:
-			msgBox = QtGui.QMessageBox(text="Group already exists")
-			msgBox.exec_()
-			return
 		
 		newItem = QtGui.QTreeWidgetItem([groupName])
 		self.groupsTree.addTopLevelItem(newItem)

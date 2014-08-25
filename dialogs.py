@@ -6,13 +6,35 @@ from ui_add_password_dialog import Ui_AddPasswordDialog
 
 class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 	
-	def __init__(self):
+	def __init__(self, groups):
 		QtGui.QDialog.__init__(self)
 		self.setupUi(self)
+		self.newGroupEdit.textChanged.connect(self.validate)
+		self.groups = groups
+		
+		#disabled for empty string
+		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+		button.setEnabled(False)
 	
 	def newGroupName(self):
 		return self.newGroupEdit.text()
 		
+	
+	def validate(self):
+		"""
+		Validates input if name is not empty and is different from
+		existing group names.
+		"""
+		valid = True
+		text = self.newGroupEdit.text()
+		if text.isEmpty():
+			valid = False
+		
+		if str(text) in self.groups:
+			valid = False
+		
+		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+		button.setEnabled(valid)
 	
 class TrezorPassphraseDialog(QtGui.QDialog, Ui_TrezorPassphraseDialog):
 	
