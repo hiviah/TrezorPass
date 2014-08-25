@@ -75,11 +75,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		copyPasswordAction = QtGui.QAction('Copy password', self)
 		newItemAction = QtGui.QAction('New item', self)
 		deleteItemAction = QtGui.QAction('Delete item', self)
+		editItemAction = QtGui.QAction('Edit item', self)
 		self.passwdMenu.addAction(showPasswordAction)
 		self.passwdMenu.addAction(copyPasswordAction)
 		self.passwdMenu.addSeparator()
 		self.passwdMenu.addAction(newItemAction)
 		self.passwdMenu.addAction(deleteItemAction)
+		self.passwdMenu.addAction(editItemAction)
 		
 		#disable creating if no group is selected
 		if self.selectedGroup is None:
@@ -91,6 +93,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			deleteItemAction.setEnabled(False)
 			showPasswordAction.setEnabled(False)
 			copyPasswordAction.setEnabled(False)
+			editItemAction.setEnabled(False)
 		
 		action = self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
 		if action == newItemAction:
@@ -99,6 +102,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			self.deletePassword(item)
 		elif action == showPasswordAction:
 			self.showPassword(item)
+		elif action == editItemAction:
+			self.editPassword(item)
 			
 	
 	def createGroup(self):
@@ -123,40 +128,6 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsTree.selectionModel().select(itemIdx,
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
 	
-	def deletePassword(self, item):
-		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
-		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-		res = msgBox.exec_()
-		
-		if res != QtGui.QMessageBox.Yes:
-			return
-		
-		row = self.passwordTable.row(item)
-		self.passwordTable.removeRow(row)
-		group = self.pwMap.groups[self.selectedGroup]
-		group.removePair(row)
-	
-	def showPassword(self, item):
-		#check if this password has been decrypted, use cached version
-		row = self.passwordTable.row(item)
-		cached = item.data(QtCore.Qt.UserRole)
-		
-		if cached.isValid():
-			decrypted = str(cached.toString())
-		else: #decrypt with Trezor
-			
-			group = self.pwMap.groups[self.selectedGroup]
-			pwPair = group.pair(row)
-			encPw = pwPair[1]
-			
-			decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
-		item = QtGui.QTableWidgetItem(decrypted)
-		
-		#cache already decrypted password until table is refreshed
-		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
-		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
-		self.passwordTable.setItem(row, 1, item)
-	
 	def deleteGroup(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
 		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
@@ -172,6 +143,50 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		itemIdx = self.groupsTree.indexOfTopLevelItem(item)
 		self.groupsTree.takeTopLevelItem(itemIdx)
 		self.passwordTable.setRowCount(0)
+	
+	def deletePassword(self, item):
+		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
+		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+		res = msgBox.exec_()
+		
+		if res != QtGui.QMessageBox.Yes:
+			return
+		
+		row = self.passwordTable.row(item)
+		self.passwordTable.removeRow(row)
+		group = self.pwMap.groups[self.selectedGroup]
+		group.removePair(row)
+	
+	def cachedOrDecrypt(self, item):
+		"""
+		Try retrieving cached password from item, otherwise decrypt with
+		Trezor.
+		"""
+		row = self.passwordTable.row(item)
+		cached = item.data(QtCore.Qt.UserRole)
+		
+		if cached.isValid():
+			decrypted = str(cached.toString())
+		else: #decrypt with Trezor
+			
+			group = self.pwMap.groups[self.selectedGroup]
+			pwPair = group.pair(row)
+			encPw = pwPair[1]
+			
+			decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
+		
+		return decrypted
+	
+	def showPassword(self, item):
+		#check if this password has been decrypted, use cached version
+		row = self.passwordTable.row(item)
+		decrypted = self.cachedOrDecrypt(item)
+		item = QtGui.QTableWidgetItem(decrypted)
+		
+		#cache already decrypted password until table is refreshed
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.passwordTable.setItem(row, 1, item)
 	
 	def createPassword(self):
 		"""Slot to create key-value password pair.
@@ -194,6 +209,33 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
 		group.addPair(str(dialog.key()), encPw)
 	
+	def editPassword(self, item):
+		row = self.passwordTable.row(item)
+		group = self.pwMap.groups[self.selectedGroup]
+		decrypted = self.cachedOrDecrypt(item)
+		
+		dialog = AddPasswordDialog()
+		pair = group.pair(row)
+		dialog.keyEdit.setText(pair[0])
+		dialog.pwEdit1.setText(decrypted)
+		dialog.pwEdit2.setText(decrypted)
+		
+		if not dialog.exec_():
+			return
+		
+		item = QtGui.QTableWidgetItem(dialog.key())
+		pwItem = QtGui.QTableWidgetItem("*****")
+		self.passwordTable.setItem(row, 0, item)
+		self.passwordTable.setItem(row, 1, pwItem)
+		
+		plainPw = str(dialog.pw1())
+		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
+		group.updatePair(row, str(dialog.key()), encPw)
+	
+		#password is now also cached since it was already revealed
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
+		pwItem.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
+		
 	def loadPasswords(self, item):
 		"""Slot that should load items for group that has been clicked on.
 		"""

@@ -58,6 +58,10 @@ class PasswordGroup(object):
 	def removePair(self, idx):
 		"""Remove pair at given index"""
 		self.pairs.pop(idx)
+	
+	def updatePair(self, idx, key, encryptedValue):
+		"""Update pair at index idx with given key and value"""
+		self.pairs[idx] = (key, encryptedValue)
 		
 	def pair(self, idx):
 		"""Return pair with given index"""
