@@ -53,6 +53,9 @@ class PasswordGroup(object):
 	
 	def addPair(self, key, encryptedValue):
 		self.pairs.append((key, encryptedValue))
+	
+	def pair(self, idx):
+		return self.pairs[idx]
 
 class PasswordMap(object):
 	"""Storage of groups of passwords in memory"""
@@ -221,7 +224,7 @@ class PasswordMap(object):
 		"""
 		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, groupName, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
 		prefixed = Padding.unpad(plain)
-		password = plain[BLOCKSIZE:]
-		return ret
+		password = prefixed[BLOCKSIZE:]
+		return password
 		
 		

@@ -127,7 +127,15 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		pass
 	
 	def showPassword(self, item):
-		pass
+		row = self.passwordTable.row(item)
+		
+		group = self.pwMap.groups[self.selectedGroup]
+		pwPair = group.pair(row)
+		encPw = pwPair[1]
+		
+		decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
+		item = QtGui.QTableWidgetItem(decrypted)
+		self.passwordTable.setItem(row, 1, item)
 	
 	def deleteGroup(self, item):
 		name = str(item.text(0))
