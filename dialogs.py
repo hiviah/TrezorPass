@@ -3,6 +3,7 @@ from PyQt4 import QtGui, QtCore
 from ui_addgroup_dialog import Ui_AddGroupDialog
 from ui_trezor_passphrase_dialog import Ui_TrezorPassphraseDialog
 from ui_add_password_dialog import Ui_AddPasswordDialog
+from ui_initialize_dialog import Ui_InitializeDialog
 
 class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 	
@@ -69,3 +70,22 @@ class AddPasswordDialog(QtGui.QDialog, Ui_AddPasswordDialog):
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
 		button.setEnabled(same)
 		
+class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
+	
+	def __init__(self):
+		QtGui.QDialog.__init__(self)
+		self.setupUi(self)
+		self.masterEdit1.textChanged.connect(self.validatePw)
+		self.masterEdit2.textChanged.connect(self.validatePw)
+	
+	
+	def pw1(self):
+		return self.masterEdit1.text()
+	
+	def pw2(self):
+		return self.masterEdit2.text()
+	
+	def validatePw(self):
+		same = self.pw1() == self.pw2()
+		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
+		button.setEnabled(same)

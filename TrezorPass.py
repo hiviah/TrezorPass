@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os.path
 
 from PyQt4 import QtGui, QtCore
 from Crypto import Random
@@ -12,7 +13,8 @@ from ui_mainwindow import Ui_MainWindow
 
 import password_map
 
-from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog
+from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
+	InitializeDialog
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
@@ -38,6 +40,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setHorizontalHeaderItem(0, headerKey)
 		self.passwordTable.setHorizontalHeaderItem(1, headerValue)
 		
+		groupNames = sorted(self.pwMap.groups.keys())
+		for groupName in groupNames:
+			item = QtGui.QTreeWidgetItem([groupName])
+			self.groupsTree.addTopLevelItem(item)
 	
 	def showGroupsContextMenu(self, point):
 		"""
@@ -270,11 +276,15 @@ class QtTrezorMixin(object):
 	
 	def __init__(self, *args, **kwargs):
 		super(QtTrezorMixin, self).__init__(*args, **kwargs)
+		self.passphrase = None
 	
 	def callback_ButtonRequest(self, msg):
 		return proto.ButtonAck()
 
 	def callback_PassphraseRequest(self, msg):
+		if self.passphrase is not None:
+			return proto.PassphraseAck(passphrase=self.passphrase)
+			
 		dialog = TrezorPassphraseDialog()
 		if not dialog.exec_():
 			sys.exit(3)
@@ -283,6 +293,12 @@ class QtTrezorMixin(object):
 			passphrase = unicode(passphrase)
 		
 		return proto.PassphraseAck(passphrase=passphrase)
+	
+	def prefillPassphrase(self, passphrase):
+		"""
+		Instead of asking for passphrase, use this one
+		"""
+		self.passphrase = unicode(passphrase)
 
 class QtTrezorClient(ProtocolMixin, QtTrezorMixin, BaseClient):
 	"""
@@ -351,6 +367,25 @@ class TrezorChooser(object):
 		return deviceTuples[chosenDevice][1]
 		
 
+def initializeStorage(trezor):
+	"""
+	Initialize new encrypted password file, ask for master passphrase.
+	
+	Makes sure a session is created on Trezor so that the passphrase
+	will be cached until disconnect.
+	"""
+	dialog = InitializeDialog()
+	if not dialog.exec_():
+		sys.exit(4)
+		
+	master = str(dialog.pw1())
+	trezor.prefillPassphrase(master)
+	
+	#Do one encryption to force Trezor to request the passphrase and create
+	#a session. Seems there's no cleaner way to do this.
+	bogus = "0123456789abcdef"
+	trezor.encrypt_keyvalue([0], "prefill", bogus, ask_on_encrypt=False, ask_on_decrypt=True)
+	
 
 app = QtGui.QApplication(sys.argv)
 
@@ -367,7 +402,12 @@ trezor.clear_session()
 #print "label:", trezor.features.label
 
 pwMap = password_map.PasswordMap(trezor)
-#pwMap.load("trezorpass.pwdb")
+
+if os.path.isfile("trezorpass.pwdb"):
+	pwMap.load("trezorpass.pwdb")
+else:
+	initializeStorage(trezor)
+	
 rng = Random.new()
 pwMap.outerIv = rng.read(password_map.BLOCKSIZE)
 pwMap.outerKey = rng.read(password_map.KEYSIZE)
@@ -377,7 +417,6 @@ mainWindow = MainWindow(pwMap)
 mainWindow.show()
 retCode = app.exec_()
 
-#pwMap.save("trezorpass.pwdb")
-#pwMap.load("trezorpass.pwdb")
+pwMap.save("trezorpass.pwdb")
 
 sys.exit(retCode)
