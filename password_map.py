@@ -2,9 +2,9 @@ import struct
 import cPickle
 import hmac
 import hashlib
-import os
 
 from Crypto.Cipher import AES
+from Crypto import Random
 
 ## On-disk format
 #
@@ -131,7 +131,8 @@ class PasswordMap(object):
 		@throws IOError: if writing file failed
 		"""
 		assert len(self.outerKey) == KEYSIZE
-		self.outerIv = os.urandom(BLOCKSIZE)
+		rnd = Random.new()
+		self.outerIv = rnd.read(BLOCKSIZE)
 		wrappedKey = self.wrapKey(self.outerKey)
 		
 		with file(fname, "wb") as f:
@@ -204,7 +205,8 @@ class PasswordMap(object):
 		@param groupName key that will be shown to user on Trezor and
 			used to encrypt the password
 		"""
-		rndBlock = os.urandom(BLOCKSIZE)
+		rnd = Random.new()
+		rndBlock = rnd.read(BLOCKSIZE)
 		padded = Padding.pad(rndBlock + password)
 		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, groupName, padded, ask_on_encrypt=False, ask_on_decrypt=True)
 		return ret
