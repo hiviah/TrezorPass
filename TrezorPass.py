@@ -33,6 +33,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
+		self.passwordTable.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+		self.passwordTable.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+		
+		shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
 		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
@@ -110,6 +114,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			self.showPassword(item)
 		elif action == editItemAction:
 			self.editPassword(item)
+		elif action == copyPasswordAction:
+			self.copyPasswordFromItem(item)
 			
 	
 	def createGroup(self):
@@ -241,6 +247,32 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		#password is now also cached since it was already revealed
 		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
 		pwItem.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
+		
+	def copyPasswordFromSelection(self):
+		"""
+		Copy selected password to clipboard. Password is decrypted if
+		necessary.
+		"""
+		indexes = self.passwordTable.selectedIndexes()
+		if not indexes:
+			return
+		
+		#there will be more indexes as the selection is on a row
+		row = indexes[0].row()
+		item = self.passwordTable.item(row, 1)
+		self.copyPasswordFromItem(item)
+	
+	def copyPasswordFromItem(self, item):
+		row = self.passwordTable.row(item)
+		group = self.pwMap.groups[self.selectedGroup]
+		decrypted = self.cachedOrDecrypt(item)
+		
+		clipboard = QtGui.QApplication.clipboard()
+		clipboard.setText(decrypted)
+		
+		#cache decrypted password
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
 		
 	def loadPasswords(self, item):
 		"""Slot that should load items for group that has been clicked on.
@@ -389,9 +421,15 @@ def initializeStorage(trezor):
 
 app = QtGui.QApplication(sys.argv)
 
-trezorChooser = TrezorChooser()
-trezorChooseCallback = lambda deviceTuples: 0
-trezor = trezorChooser.getDevice(trezorChooseCallback)
+try:
+	trezorChooser = TrezorChooser()
+	trezorChooseCallback = lambda deviceTuples: 0
+	trezor = trezorChooser.getDevice(trezorChooseCallback)
+except ConnectionError:
+	msgBox = QtGui.QMessageBox(text="Connection to Trezor failed")
+	msgBox.exec_()
+	sys.exit(1)
+	
 
 if trezor is None:
 	msgBox = QtGui.QMessageBox(text="No available Trezor found, quitting.")
