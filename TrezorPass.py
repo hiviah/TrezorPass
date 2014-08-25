@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys
-import os
 
 from PyQt4 import QtGui, QtCore
+from Crypto import Random
 
 from trezorlib.client import BaseClient, ProtocolMixin
 from trezorlib.transport_hid import HidTransport
@@ -71,9 +71,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		@param point: point in self.passwordTable where click occured
 		"""
 		self.passwdMenu = QtGui.QMenu(self)
+		showPasswordAction = QtGui.QAction('Show password', self)
+		copyPasswordAction = QtGui.QAction('Copy password', self)
 		newItemAction = QtGui.QAction('New item', self)
-		newItemAction.triggered.connect(self.createPassword)
 		deleteItemAction = QtGui.QAction('Delete item', self)
+		self.passwdMenu.addAction(showPasswordAction)
+		self.passwdMenu.addAction(copyPasswordAction)
+		self.passwdMenu.addSeparator()
 		self.passwdMenu.addAction(newItemAction)
 		self.passwdMenu.addAction(deleteItemAction)
 		
@@ -85,8 +89,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		item = self.passwordTable.itemAt(point.x(), point.y())
 		if item is None:
 			deleteItemAction.setEnabled(False)
+			showPasswordAction.setEnabled(False)
+			copyPasswordAction.setEnabled(False)
 		
-		self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
+		action = self.passwdMenu.exec_(self.passwordTable.mapToGlobal(point))
+		if action == newItemAction:
+			self.createPassword()
+		elif action == deleteItemAction:
+			self.detelePassword(item)
+		elif action == showPasswordAction:
+			self.showPassword(item)
+			
 	
 	def createGroup(self):
 		"""Slot to create a password group.
@@ -116,6 +129,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		itemIdx = self.groupsTree.indexFromItem(newItem)
 		self.groupsTree.selectionModel().select(itemIdx,
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
+	
+	def deletePassword(self, item):
+		pass
+	
+	def showPassword(self, item):
+		pass
 	
 	def deleteGroup(self, item):
 		name = str(item.text(0))
@@ -279,8 +298,9 @@ trezor.clear_session()
 
 pwMap = password_map.PasswordMap(trezor)
 #pwMap.load("trezorpass.pwdb")
-pwMap.outerIv = os.urandom(16)
-pwMap.outerKey = os.urandom(32)
+rng = Random.new()
+pwMap.outerIv = rng.read(password_map.BLOCKSIZE)
+pwMap.outerKey = rng.read(password_map.KEYSIZE)
 pwMap.encryptedBackupKey = ""
 
 mainWindow = MainWindow(pwMap)
