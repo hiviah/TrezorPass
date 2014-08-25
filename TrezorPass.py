@@ -127,14 +127,24 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		pass
 	
 	def showPassword(self, item):
+		#check if this password has been decrypted, use cached version
 		row = self.passwordTable.row(item)
+		cached = item.data(QtCore.Qt.UserRole)
 		
-		group = self.pwMap.groups[self.selectedGroup]
-		pwPair = group.pair(row)
-		encPw = pwPair[1]
-		
-		decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
+		if cached.isValid():
+			decrypted = str(cached.toString())
+		else: #decrypt with Trezor
+			
+			group = self.pwMap.groups[self.selectedGroup]
+			pwPair = group.pair(row)
+			encPw = pwPair[1]
+			
+			decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
 		item = QtGui.QTableWidgetItem(decrypted)
+		
+		#cache already decrypted password until table is refreshed
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
 		self.passwordTable.setItem(row, 1, item)
 	
 	def deleteGroup(self, item):
