@@ -131,7 +131,7 @@ class PasswordMap(object):
 			for (ch1, ch2) in zip(hmacDigest, newHmacDigest):
 				hmacCompare |= int(ch1 != ch2)
 			if hmacCompare != 0:
-				raise IOError("Corrupted disk format - HMAC does not match")
+				raise IOError("Corrupted disk format - HMAC does not match or bad passphrase")
 				
 			serialized = self.decryptOuter(encrypted, self.outerIv)
 			self.groups = cPickle.loads(serialized)

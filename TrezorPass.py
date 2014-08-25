@@ -404,7 +404,13 @@ trezor.clear_session()
 pwMap = password_map.PasswordMap(trezor)
 
 if os.path.isfile("trezorpass.pwdb"):
-	pwMap.load("trezorpass.pwdb")
+	try:
+		pwMap.load("trezorpass.pwdb")
+	except Exception, e:
+		msgBox = QtGui.QMessageBox(text="Could not decrypt passwords: " + e.message)
+		msgBox.exec_()
+		sys.exit(5)
+		
 else:
 	initializeStorage(trezor)
 	
