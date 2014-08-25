@@ -158,6 +158,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setItem(row, 1, item)
 	
 	def deleteGroup(self, item):
+		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
+		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+		res = msgBox.exec_()
+		
+		if res != QtGui.QMessageBox.Yes:
+			return
+		
 		name = str(item.text(0))
 		self.selectedGroup = None
 		del self.pwMap.groups[name]
