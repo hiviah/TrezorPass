@@ -41,7 +41,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
 		self.passwordTable.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
 		
-		QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
+		shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
+		shortcut.setContext(QtCore.Qt.WidgetShortcut)
 		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
