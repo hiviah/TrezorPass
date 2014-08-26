@@ -20,6 +20,8 @@ from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
+	KEY_IDX = 0 #column where key is shown in password table
+	PASSWORD_IDX = 1 #column where password is shown in password table
 	CACHE_IDX = 0 #column of QWidgetItem in whose data we cache decrypted passwords
 	
 	def __init__(self, pwMap):
@@ -44,8 +46,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
 		self.passwordTable.setColumnCount(2)
-		self.passwordTable.setHorizontalHeaderItem(0, headerKey)
-		self.passwordTable.setHorizontalHeaderItem(1, headerValue)
+		self.passwordTable.setHorizontalHeaderItem(self.KEY_IDX, headerKey)
+		self.passwordTable.setHorizontalHeaderItem(self.PASSWORD_IDX, headerValue)
 		
 		groupNames = sorted(self.pwMap.groups.keys())
 		for groupName in groupNames:
@@ -226,7 +228,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		item = QtGui.QTableWidgetItem(decrypted)
 		
 		self.cachePassword(row, decrypted)
-		self.passwordTable.setItem(row, 1, item)
+		self.passwordTable.setItem(row, self.PASSWORD_IDX, item)
 	
 	def createPassword(self):
 		"""Slot to create key-value password pair.
@@ -242,8 +244,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setRowCount(rowCount+1)
 		item = QtGui.QTableWidgetItem(dialog.key())
 		pwItem = QtGui.QTableWidgetItem("*****")
-		self.passwordTable.setItem(rowCount, 0, item)
-		self.passwordTable.setItem(rowCount, 1, pwItem)
+		self.passwordTable.setItem(rowCount, self.KEY_IDX, item)
+		self.passwordTable.setItem(rowCount, self.PASSWORD_IDX, pwItem)
 		
 		plainPw = str(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
@@ -267,8 +269,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		item = QtGui.QTableWidgetItem(dialog.key())
 		pwItem = QtGui.QTableWidgetItem("*****")
-		self.passwordTable.setItem(row, 0, item)
-		self.passwordTable.setItem(row, 1, pwItem)
+		self.passwordTable.setItem(row, self.KEY_IDX, item)
+		self.passwordTable.setItem(row, self.PASSWORD_IDX, pwItem)
 		
 		plainPw = str(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
@@ -313,8 +315,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		for key, encValue in group.pairs:
 			item = QtGui.QTableWidgetItem(key)
 			pwItem = QtGui.QTableWidgetItem("*****")
-			self.passwordTable.setItem(i, 0, item)
-			self.passwordTable.setItem(i, 1, pwItem)
+			self.passwordTable.setItem(i, self.KEY_IDX, item)
+			self.passwordTable.setItem(i, self.PASSWORD_IDX, pwItem)
 			i = i+1
 	
 	def loadPasswordsBySelection(self):
