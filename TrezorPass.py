@@ -176,6 +176,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.removeRow(row)
 		group = self.pwMap.groups[self.selectedGroup]
 		group.removePair(row)
+		
+		self.passwordTable.resizeRowsToContents()
 	
 	def cachePassword(self, row, password):
 		"""
@@ -253,6 +255,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		group.addPair(str(dialog.key()), encPw)
 		
 		self.cachePassword(rowCount, plainPw)
+		
+		self.passwordTable.resizeRowsToContents()
 	
 	def editPassword(self, item):
 		row = self.passwordTable.row(item)
@@ -319,6 +323,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			self.passwordTable.setItem(i, self.KEY_IDX, item)
 			self.passwordTable.setItem(i, self.PASSWORD_IDX, pwItem)
 			i = i+1
+		
+		self.passwordTable.resizeRowsToContents()
 	
 	def loadPasswordsBySelection(self):
 		selectedItems = self.groupsTree.selectedItems()
