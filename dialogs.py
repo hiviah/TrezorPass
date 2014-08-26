@@ -55,6 +55,7 @@ class AddPasswordDialog(QtGui.QDialog, Ui_AddPasswordDialog):
 		self.setupUi(self)
 		self.pwEdit1.textChanged.connect(self.validatePw)
 		self.pwEdit2.textChanged.connect(self.validatePw)
+		self.showHideButton.clicked.connect(self.switchPwVisible)
 	
 	def key(self):
 		return self.keyEdit.text()
@@ -69,6 +70,16 @@ class AddPasswordDialog(QtGui.QDialog, Ui_AddPasswordDialog):
 		same = self.pw1() == self.pw2()
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
 		button.setEnabled(same)
+	
+	def switchPwVisible(self):
+		pwMode = self.pwEdit1.echoMode()
+		if pwMode == QtGui.QLineEdit.Password:
+			newMode = QtGui.QLineEdit.Normal
+		else:
+			newMode = QtGui.QLineEdit.Password
+			
+		self.pwEdit1.setEchoMode(newMode)
+		self.pwEdit2.setEchoMode(newMode)
 		
 class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 	
