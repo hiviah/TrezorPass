@@ -86,6 +86,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwdMenu = QtGui.QMenu(self)
 		showPasswordAction = QtGui.QAction('Show password', self)
 		copyPasswordAction = QtGui.QAction('Copy password', self)
+		copyPasswordAction.setShortcut(QtGui.QKeySequence( "Ctrl+C"))
 		newItemAction = QtGui.QAction('New item', self)
 		deleteItemAction = QtGui.QAction('Delete item', self)
 		editItemAction = QtGui.QAction('Edit item', self)
@@ -142,6 +143,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		itemIdx = self.groupsTree.indexFromItem(newItem)
 		self.groupsTree.selectionModel().select(itemIdx,
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
+		self.groupsTree.sortItems(0, QtCore.Qt.AscendingOrder)
 	
 	def deleteGroup(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
