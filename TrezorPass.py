@@ -31,10 +31,14 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.pwMap = pwMap
 		self.selectedGroup = None
 		
+		self.groupsModel = QtGui.QStandardItemModel()
+		
+		self.groupsTree.setModel(self.groupsModel)
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
-		self.groupsTree.itemClicked.connect(self.loadPasswords)
-		self.groupsTree.itemSelectionChanged.connect(self.loadPasswordsBySelection)
+		self.groupsTree.clicked.connect(self.loadPasswordsBySelection)
+		self.groupsTree.selectionModel().selectionChanged.connect(self.loadPasswordsBySelection)
+		self.groupsTree.setSortingEnabled(True)
 		
 		self.passwordTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.passwordTable.customContextMenuRequested.connect(self.showPasswdContextMenu)
@@ -52,8 +56,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		groupNames = sorted(self.pwMap.groups.keys())
 		for groupName in groupNames:
-			item = QtGui.QTreeWidgetItem([groupName])
-			self.groupsTree.addTopLevelItem(item)
+			item = QtGui.QStandardItem(groupName)
+			self.groupsModel.appendRow(item)
 	
 	def showGroupsContextMenu(self, point):
 		"""
@@ -68,7 +72,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.addGroupMenu.addAction(deleteGroupAction)
 		
 		#disable deleting if no point is clicked on
-		item = self.groupsTree.itemAt(point.x(), point.y())
+		itemIdx = self.groupsTree.indexAt(point)
+		item = self.groupsModel.itemFromIndex(itemIdx)
 		if item is None:
 			deleteGroupAction.setEnabled(False)
 		
@@ -134,8 +139,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		groupName = dialog.newGroupName()
 		
-		newItem = QtGui.QTreeWidgetItem([groupName])
-		self.groupsTree.addTopLevelItem(newItem)
+		newItem = QtGui.QStandardItem(groupName)
+		self.groupsModel.appendRow(newItem)
 		self.pwMap.addGroup(groupName)
 		
 		#Make item's passwords loaded so new key-value pairs can be created
@@ -143,10 +148,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.loadPasswords(newItem)
 
 		#make new item selected to save a few clicks
-		itemIdx = self.groupsTree.indexFromItem(newItem)
+		itemIdx = self.groupsModel.indexFromItem(newItem)
 		self.groupsTree.selectionModel().select(itemIdx,
 			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
-		self.groupsTree.sortItems(0, QtCore.Qt.AscendingOrder)
+		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
 	
 	def deleteGroup(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
@@ -156,12 +161,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		if res != QtGui.QMessageBox.Yes:
 			return
 		
-		name = str(item.text(0))
+		name = str(item.text())
 		self.selectedGroup = None
 		del self.pwMap.groups[name]
 		
-		itemIdx = self.groupsTree.indexOfTopLevelItem(item)
-		self.groupsTree.takeTopLevelItem(itemIdx)
+		itemIdx = self.groupsModel.indexFromItem(item)
+		self.groupsModel.takeRow(itemIdx.row())
 		self.passwordTable.setRowCount(0)
 	
 	def deletePassword(self, item):
@@ -310,7 +315,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		"""Slot that should load items for group that has been clicked on.
 		"""
 		#self.passwordTable.clear()
-		name = str(item.text(0))
+		name = str(item.text())
 		self.selectedGroup = name
 		group = self.pwMap.groups[name]
 		self.passwordTable.setRowCount(len(group.pairs))
@@ -327,13 +332,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.resizeRowsToContents()
 	
 	def loadPasswordsBySelection(self):
-		selectedItems = self.groupsTree.selectedItems()
+		itemIdx = self.groupsTree.currentIndex()
+		selectedItem = self.groupsModel.itemFromIndex(itemIdx)
 		
-		if len(selectedItems) < 1:
+		if not selectedItem:
 			return
 		
-		item = selectedItems[0]
-		self.loadPasswords(item)
+		self.loadPasswords(selectedItem)
 	
 class QtTrezorMixin(object):
 	"""
