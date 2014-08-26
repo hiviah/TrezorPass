@@ -6,6 +6,7 @@ from PyQt4 import QtGui, QtCore
 from Crypto import Random
 
 from trezorlib.client import BaseClient, ProtocolMixin
+from trezorlib.transport import ConnectionError
 from trezorlib.transport_hid import HidTransport
 from trezorlib import messages_pb2 as proto
 
@@ -19,6 +20,8 @@ from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
 
+	CACHE_IDX = 0 #column of QWidgetItem in whose data we cache decrypted passwords
+	
 	def __init__(self, pwMap):
 		QtGui.QMainWindow.__init__(self)
 		self.setupUi(self)
@@ -36,7 +39,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
 		self.passwordTable.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
 		
-		shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
+		QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
 		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
@@ -169,18 +172,43 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		group = self.pwMap.groups[self.selectedGroup]
 		group.removePair(row)
 	
-	def cachedOrDecrypt(self, item):
+	def cachePassword(self, row, password):
 		"""
-		Try retrieving cached password from item, otherwise decrypt with
-		Trezor.
+		Cache decrypted password for group and row. Cached items are
+		keps as data of QTableWidgetItem so that deletion invalidates
+		cache.
+		
+		Cache applies to currently selectedGroup.
+		
+		Switching between groups clears the table and thus invalidates
+		cached passwords.
 		"""
-		row = self.passwordTable.row(item)
+		item = self.passwordTable.item(row, MainWindow.CACHE_IDX)
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(password))
+	
+	def cachedPassword(self, row):
+		"""
+		Retrieve cached password for given row of currently selected group.
+		Returns password as string or None if no password cached.
+		"""
+		item = self.passwordTable.item(row, MainWindow.CACHE_IDX)
 		cached = item.data(QtCore.Qt.UserRole)
 		
 		if cached.isValid():
-			decrypted = str(cached.toString())
+			return str(cached.toString())
+		
+		return None
+	
+	def cachedOrDecrypt(self, row):
+		"""
+		Try retrieving cached password for item in given row, otherwise
+		decrypt with Trezor.
+		"""
+		cached = self.cachedPassword(row)
+		
+		if cached is not None:
+			return cached
 		else: #decrypt with Trezor
-			
 			group = self.pwMap.groups[self.selectedGroup]
 			pwPair = group.pair(row)
 			encPw = pwPair[1]
@@ -192,12 +220,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def showPassword(self, item):
 		#check if this password has been decrypted, use cached version
 		row = self.passwordTable.row(item)
-		decrypted = self.cachedOrDecrypt(item)
+		decrypted = self.cachedOrDecrypt(row)
 		item = QtGui.QTableWidgetItem(decrypted)
 		
-		#cache already decrypted password until table is refreshed
-		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
-		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.cachePassword(row, decrypted)
 		self.passwordTable.setItem(row, 1, item)
 	
 	def createPassword(self):
@@ -220,11 +246,13 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		plainPw = str(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
 		group.addPair(str(dialog.key()), encPw)
+		
+		self.cachePassword(rowCount, plainPw)
 	
 	def editPassword(self, item):
 		row = self.passwordTable.row(item)
 		group = self.pwMap.groups[self.selectedGroup]
-		decrypted = self.cachedOrDecrypt(item)
+		decrypted = self.cachedOrDecrypt(row)
 		
 		dialog = AddPasswordDialog()
 		pair = group.pair(row)
@@ -244,9 +272,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
 		group.updatePair(row, str(dialog.key()), encPw)
 	
-		#password is now also cached since it was already revealed
-		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
-		pwItem.setData(QtCore.Qt.UserRole, QtCore.QVariant(plainPw))
+		self.cachePassword(row, plainPw)
 		
 	def copyPasswordFromSelection(self):
 		"""
@@ -264,15 +290,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	
 	def copyPasswordFromItem(self, item):
 		row = self.passwordTable.row(item)
-		group = self.pwMap.groups[self.selectedGroup]
-		decrypted = self.cachedOrDecrypt(item)
+		decrypted = self.cachedOrDecrypt(row)
 		
 		clipboard = QtGui.QApplication.clipboard()
 		clipboard.setText(decrypted)
 		
-		#cache decrypted password
-		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
-		self.passwordTable.item(row, 0).setData(QtCore.Qt.UserRole, QtCore.QVariant(decrypted))
+		self.cachePassword(row, decrypted)
 		
 	def loadPasswords(self, item):
 		"""Slot that should load items for group that has been clicked on.
