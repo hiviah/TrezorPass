@@ -13,6 +13,7 @@ from trezorlib import messages_pb2 as proto
 from ui_mainwindow import Ui_MainWindow
 
 import password_map
+from encoding import q2s, s2q
 
 from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
 	InitializeDialog
@@ -58,10 +59,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		self.searchEdit.textChanged.connect(self.filterGroups)
 		
-		groupNames = sorted(self.pwMap.groups.keys())
+		groupNames = self.pwMap.groups.keys()
 		for groupName in groupNames:
-			item = QtGui.QStandardItem(groupName)
+			item = QtGui.QStandardItem(s2q(groupName))
 			self.groupsModel.appendRow(item)
+		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
 	
 	def showGroupsContextMenu(self, point):
 		"""
@@ -146,7 +148,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		newItem = QtGui.QStandardItem(groupName)
 		self.groupsModel.appendRow(newItem)
-		self.pwMap.addGroup(groupName)
+		self.pwMap.addGroup(q2s(groupName))
 		
 		#Make item's passwords loaded so new key-value pairs can be created
 		#right away - better from UX perspective.
@@ -166,7 +168,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		if res != QtGui.QMessageBox.Yes:
 			return
 		
-		name = str(item.text())
+		name = q2s(item.text())
 		self.selectedGroup = None
 		del self.pwMap.groups[name]
 		
@@ -202,7 +204,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		cached passwords.
 		"""
 		item = self.passwordTable.item(row, MainWindow.CACHE_IDX)
-		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(password))
+		item.setData(QtCore.Qt.UserRole, QtCore.QVariant(s2q(password)))
 	
 	def cachedPassword(self, row):
 		"""
@@ -213,7 +215,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		cached = item.data(QtCore.Qt.UserRole)
 		
 		if cached.isValid():
-			return str(cached.toString())
+			return q2s(cached.toString())
 		
 		return None
 	
@@ -239,7 +241,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		#check if this password has been decrypted, use cached version
 		row = self.passwordTable.row(item)
 		decrypted = self.cachedOrDecrypt(row)
-		item = QtGui.QTableWidgetItem(decrypted)
+		item = QtGui.QTableWidgetItem(s2q(decrypted))
 		
 		self.cachePassword(row, decrypted)
 		self.passwordTable.setItem(row, self.PASSWORD_IDX, item)
@@ -261,9 +263,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setItem(rowCount, self.KEY_IDX, item)
 		self.passwordTable.setItem(rowCount, self.PASSWORD_IDX, pwItem)
 		
-		plainPw = str(dialog.pw1())
+		plainPw = q2s(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
-		group.addPair(str(dialog.key()), encPw)
+		group.addPair(q2s(dialog.key()), encPw)
 		
 		self.cachePassword(rowCount, plainPw)
 		
@@ -276,9 +278,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		dialog = AddPasswordDialog()
 		pair = group.pair(row)
-		dialog.keyEdit.setText(pair[0])
-		dialog.pwEdit1.setText(decrypted)
-		dialog.pwEdit2.setText(decrypted)
+		dialog.keyEdit.setText(s2q(pair[0]))
+		dialog.pwEdit1.setText(s2q(decrypted))
+		dialog.pwEdit2.setText(s2q(decrypted))
 		
 		if not dialog.exec_():
 			return
@@ -288,9 +290,9 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setItem(row, self.KEY_IDX, item)
 		self.passwordTable.setItem(row, self.PASSWORD_IDX, pwItem)
 		
-		plainPw = str(dialog.pw1())
+		plainPw = q2s(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
-		group.updatePair(row, str(dialog.key()), encPw)
+		group.updatePair(row, q2s(dialog.key()), encPw)
 	
 		self.cachePassword(row, plainPw)
 		
@@ -313,7 +315,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		decrypted = self.cachedOrDecrypt(row)
 		
 		clipboard = QtGui.QApplication.clipboard()
-		clipboard.setText(decrypted)
+		clipboard.setText(s2q(decrypted))
 		
 		self.cachePassword(row, decrypted)
 		
@@ -321,7 +323,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		"""Slot that should load items for group that has been clicked on.
 		"""
 		#self.passwordTable.clear()
-		name = str(item.text())
+		name = q2s(item.text())
 		self.selectedGroup = name
 		group = self.pwMap.groups[name]
 		self.passwordTable.setRowCount(len(group.pairs))
@@ -329,7 +331,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		i = 0
 		for key, encValue in group.pairs:
-			item = QtGui.QTableWidgetItem(key)
+			item = QtGui.QTableWidgetItem(s2q(key))
 			pwItem = QtGui.QTableWidgetItem("*****")
 			self.passwordTable.setItem(i, self.KEY_IDX, item)
 			self.passwordTable.setItem(i, self.PASSWORD_IDX, pwItem)
@@ -383,7 +385,7 @@ class QtTrezorMixin(object):
 		"""
 		Instead of asking for passphrase, use this one
 		"""
-		self.passphrase = unicode(passphrase)
+		self.passphrase = passphrase.decode("utf-8")
 
 class QtTrezorClient(ProtocolMixin, QtTrezorMixin, BaseClient):
 	"""
@@ -463,7 +465,7 @@ def initializeStorage(trezor):
 	if not dialog.exec_():
 		sys.exit(4)
 		
-	master = str(dialog.pw1())
+	master = q2s(dialog.pw1())
 	trezor.prefillPassphrase(master)
 	
 	#Do one encryption to force Trezor to request the passphrase and create

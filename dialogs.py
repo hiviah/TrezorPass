@@ -31,7 +31,7 @@ class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 		if text.isEmpty():
 			valid = False
 		
-		if str(text) in self.groups:
+		if unicode(text).encode("utf-8") in self.groups:
 			valid = False
 		
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)

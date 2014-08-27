@@ -79,7 +79,10 @@ class PasswordMap(object):
 		self.encryptedBackupKey = None
 	
 	def addGroup(self, groupName):
-		groupName = str(groupName)
+		"""
+		Add group by name as utf-8 encoded string
+		"""
+		groupName = groupName
 		if groupName in self.groups:
 			raise KeyError("Password group already exists")
 		
