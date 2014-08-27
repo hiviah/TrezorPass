@@ -32,8 +32,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.selectedGroup = None
 		
 		self.groupsModel = QtGui.QStandardItemModel()
+		self.groupsFilter = QtGui.QSortFilterProxyModel()
+		self.groupsFilter.setSourceModel(self.groupsModel)
 		
-		self.groupsTree.setModel(self.groupsModel)
+		self.groupsTree.setModel(self.groupsFilter)
 		self.groupsTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.groupsTree.customContextMenuRequested.connect(self.showGroupsContextMenu)
 		self.groupsTree.clicked.connect(self.loadPasswordsBySelection)
@@ -54,6 +56,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setHorizontalHeaderItem(self.KEY_IDX, headerKey)
 		self.passwordTable.setHorizontalHeaderItem(self.PASSWORD_IDX, headerValue)
 		
+		self.searchEdit.textChanged.connect(self.filterGroups)
+		
 		groupNames = sorted(self.pwMap.groups.keys())
 		for groupName in groupNames:
 			item = QtGui.QStandardItem(groupName)
@@ -72,7 +76,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.addGroupMenu.addAction(deleteGroupAction)
 		
 		#disable deleting if no point is clicked on
-		itemIdx = self.groupsTree.indexAt(point)
+		proxyIdx = self.groupsTree.indexAt(point)
+		itemIdx = self.groupsFilter.mapToSource(proxyIdx)
 		item = self.groupsModel.itemFromIndex(itemIdx)
 		if item is None:
 			deleteGroupAction.setEnabled(False)
@@ -168,6 +173,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		itemIdx = self.groupsModel.indexFromItem(item)
 		self.groupsModel.takeRow(itemIdx.row())
 		self.passwordTable.setRowCount(0)
+		self.groupsTree.clearSelection()
 	
 	def deletePassword(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
@@ -332,13 +338,21 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.resizeRowsToContents()
 	
 	def loadPasswordsBySelection(self):
-		itemIdx = self.groupsTree.currentIndex()
+		proxyIdx = self.groupsTree.currentIndex()
+		itemIdx = self.groupsFilter.mapToSource(proxyIdx)
 		selectedItem = self.groupsModel.itemFromIndex(itemIdx)
 		
 		if not selectedItem:
 			return
 		
 		self.loadPasswords(selectedItem)
+	
+	def filterGroups(self, substring):
+		"""
+		Filter groupsTree view to have items containing given substring.
+		"""
+		self.groupsFilter.setFilterFixedString(substring)
+		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
 	
 class QtTrezorMixin(object):
 	"""
