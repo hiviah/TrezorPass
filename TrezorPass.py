@@ -14,6 +14,7 @@ from ui_mainwindow import Ui_MainWindow
 
 import password_map
 from encoding import q2s, s2q
+from backup import Backup
 
 from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
 	InitializeDialog
@@ -458,6 +459,9 @@ def initializeStorage(trezor):
 	"""
 	Initialize new encrypted password file, ask for master passphrase.
 	
+	Initialize RSA keypair for backup, encrypt private RSA key using
+	backup passphrase and Trezor's cipher-key-value system.
+	
 	Makes sure a session is created on Trezor so that the passphrase
 	will be cached until disconnect.
 	"""
@@ -465,8 +469,15 @@ def initializeStorage(trezor):
 	if not dialog.exec_():
 		sys.exit(4)
 		
-	master = q2s(dialog.pw1())
-	trezor.prefillPassphrase(master)
+	masterPassphrase = q2s(dialog.pw1())
+	backupPassphrase = q2s(dialog.backup1())
+	
+	#trezor.prefillPassphrase(backupPassphrase)
+	#backup = Backup()
+	#backup.generate(trezor)
+	
+	#generate private-public RSA keypair, encrypt private
+	trezor.prefillPassphrase(masterPassphrase)
 	
 	#Do one encryption to force Trezor to request the passphrase and create
 	#a session. Seems there's no cleaner way to do this.

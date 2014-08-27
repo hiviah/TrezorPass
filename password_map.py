@@ -30,7 +30,10 @@ class Magic(object):
 	
 	unlockNode = [hdr, u("!I", "ULCK")] # for unlocking wrapped AES-CBC key
 	groupNode  = [hdr, u("!I", "GRUP")] # for generating keys for individual password groups
-	unlockKey = "TrezorPassMasterKey" # string to derive wrapping key from
+	unlockKey = "Decrypt with master key?" # string to derive wrapping key from
+	
+	backupNode = [hdr, u("!I", "BKUP")] # for unlocking wrapped backup private RSA key
+	backupKey = "Decrypt backup key?" # string to derive backup wrapping key from
 	
 class Padding(object):
 	"""
