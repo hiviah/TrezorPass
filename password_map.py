@@ -222,12 +222,13 @@ class PasswordMap(object):
 		Trezor.
 		
 		@param groupName key that will be shown to user on Trezor and
-			used to encrypt the password
+			used to encrypt the password. A string in utf-8
 		"""
 		rnd = Random.new()
 		rndBlock = rnd.read(BLOCKSIZE)
 		padded = Padding.pad(rndBlock + password)
-		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, groupName, padded, ask_on_encrypt=False, ask_on_decrypt=True)
+		ugroup = groupName.decode("utf-8")
+		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, ugroup, padded, ask_on_encrypt=False, ask_on_decrypt=True)
 		return ret
 		
 	def decryptPassword(self, encryptedPassword, groupName):
@@ -236,9 +237,10 @@ class PasswordMap(object):
 		discards first block.
 		
 		@param groupName key that will be shown to user on Trezor and
-			was used to encrypt the password
+			was used to encrypt the password. A string in utf-8.
 		"""
-		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, groupName, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
+		ugroup = groupName.decode("utf-8")
+		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, ugroup, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
 		prefixed = Padding.unpad(plain)
 		password = prefixed[BLOCKSIZE:]
 		return password
