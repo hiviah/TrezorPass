@@ -22,7 +22,11 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="newGroupEdit"/>
+    <widget class="QLineEdit" name="newGroupEdit">
+     <property name="maxLength">
+      <number>64</number>
+     </property>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">
