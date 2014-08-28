@@ -472,9 +472,9 @@ def initializeStorage(trezor):
 	masterPassphrase = q2s(dialog.pw1())
 	backupPassphrase = q2s(dialog.backup1())
 	
-	#trezor.prefillPassphrase(backupPassphrase)
-	#backup = Backup()
-	#backup.generate(trezor)
+	trezor.prefillPassphrase(backupPassphrase)
+	backup = Backup(trezor)
+	backup.generate()
 	
 	#generate private-public RSA keypair, encrypt private
 	trezor.prefillPassphrase(masterPassphrase)
