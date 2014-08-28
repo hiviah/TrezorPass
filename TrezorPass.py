@@ -52,6 +52,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		shortcut = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+C"), self.passwordTable, self.copyPasswordFromSelection)
 		shortcut.setContext(QtCore.Qt.WidgetShortcut)
 		
+		self.actionQuit.triggered.connect(self.close)
+		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
 		self.passwordTable.setColumnCount(2)
