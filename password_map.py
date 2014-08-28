@@ -7,7 +7,8 @@ from Crypto.Cipher import AES
 from Crypto import Random
 
 ## On-disk format
-#
+#  4 bytes	header "TZPW"
+#  4 bytes	data storage version, network order uint32_t
 # 32 bytes	AES-CBC-encrypted wrappedOuterKey
 # 16 bytes	IV
 #  2 bytes	backup private key size (B)
@@ -26,11 +27,13 @@ class Magic(object):
 	for keys.
 	"""
 	u = lambda fmt, s: struct.unpack(fmt, s)[0]
-	hdr = u("!I", "TZPW")
+	headerStr = "TZPW"
+	hdr = u("!I", headerStr)
 	
 	unlockNode = [hdr, u("!I", "ULCK")] # for unlocking wrapped AES-CBC key
 	groupNode  = [hdr, u("!I", "GRUP")] # for generating keys for individual password groups
-	unlockKey = "Decrypt with master key?" # string to derive wrapping key from
+	#the unlock key is written in this weird way to fit display nicely
+	unlockKey = "Decrypt master  key?" # string to derive wrapping key from
 	
 	backupNode = [hdr, u("!I", "BKUP")] # for unlocking wrapped backup private RSA key
 	backupKey = "Decrypt backup key?" # string to derive backup wrapping key from
@@ -99,6 +102,12 @@ class PasswordMap(object):
 		@throws IOError: if reading file failed
 		"""
 		with file(fname) as f:
+			header = f.read(len(Magic.headerStr))
+			if header != Magic.headerStr:
+				raise IOError("Bad header in storage file")
+			version = f.read(4)
+			if len(version) != 4 or struct.unpack("!I", version)[0] != 1:
+				raise IOError("Unknown version of storage file")
 			wrappedKey = f.read(KEYSIZE)
 			if len(wrappedKey) != KEYSIZE:
 				raise IOError("Corrupted disk format - bad wrapped key length")
@@ -155,6 +164,9 @@ class PasswordMap(object):
 		wrappedKey = self.wrapKey(self.outerKey)
 		
 		with file(fname, "wb") as f:
+			version = 1
+			f.write(Magic.headerStr)
+			f.write(struct.pack("!I", version))
 			f.write(wrappedKey)
 			f.write(self.outerIv)
 			serialized = cPickle.dumps(self.groups)
