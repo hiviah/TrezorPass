@@ -1,9 +1,11 @@
+import cPickle
+
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
 from Crypto import Random
 
-from password_map import Magic, Padding
+from encoding import Magic, Padding
 
 class Backup(object):
 	"""
@@ -48,7 +50,7 @@ class Backup(object):
 		ephemeral = rng.read(self.SYMMETRIC_KEYSIZE)
 		self.ephemeralIv = rng.read(self.BLOCKSIZE)
 		cipher = AES.new(ephemeral, AES.MODE_CBC, self.ephemeralIv)
-		padded = Padding.pad(privateKey)
+		padded = Padding(self.BLOCKSIZE).pad(privateKey)
 		self.encryptedPrivate = cipher.encrypt(padded)
 		
 		self.encryptedEphemeral = self.trezor.encrypt_keyvalue(
@@ -70,7 +72,26 @@ class Backup(object):
 		
 		cipher = AES.new(ephemeral, AES.MODE_CBC, self.ephemeralIv)
 		padded = cipher.decrypt(self.encryptedPrivate)
-		privateDer = Padding.unpad(padded)
+		privateDer = Padding(self.BLOCKSIZE).unpad(padded)
 		
 		privateKey = RSA.importKey(privateDer)
 		return privateKey
+	
+	def serialize(self):
+		"""
+		Return object data as serialized string.
+		"""
+		publicDer = self.publicKey.exportKey(format="DER")
+		picklable = (self.ephemeralIv, self.encryptedEphemeral,
+		     self.encryptedPrivate, publicDer)
+		return cPickle.dumps(picklable, cPickle.HIGHEST_PROTOCOL)
+
+	def deserialize(self, serialized):
+		"""
+		Set object data from serialized string
+		"""
+		unpickled = cPickle.loads(serialized)
+		(self.ephemeralIv, self.encryptedEphemeral,
+		     self.encryptedPrivate, publicDer) = unpickled
+		self.publicKey = RSA.importKey(publicDer)
+		

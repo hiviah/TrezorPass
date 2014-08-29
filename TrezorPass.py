@@ -457,7 +457,7 @@ class TrezorChooser(object):
 		return deviceTuples[chosenDevice][1]
 		
 
-def initializeStorage(trezor):
+def initializeStorage(trezor, pwMap):
 	"""
 	Initialize new encrypted password file, ask for master passphrase.
 	
@@ -466,6 +466,9 @@ def initializeStorage(trezor):
 	
 	Makes sure a session is created on Trezor so that the passphrase
 	will be cached until disconnect.
+	
+	@param trezor: Trezor client
+	@param pwMap: PasswordMap where to put encrypted backupKeys
 	"""
 	dialog = InitializeDialog()
 	if not dialog.exec_():
@@ -476,7 +479,7 @@ def initializeStorage(trezor):
 	trezor.prefillPassphrase(masterPassphrase)
 	backup = Backup(trezor)
 	backup.generate()
-	
+	pwMap.backupKey = backup
 	
 
 app = QtGui.QApplication(sys.argv)
@@ -510,7 +513,7 @@ if os.path.isfile("trezorpass.pwdb"):
 		sys.exit(5)
 		
 else:
-	initializeStorage(trezor)
+	initializeStorage(trezor, pwMap)
 	
 rng = Random.new()
 pwMap.outerIv = rng.read(password_map.BLOCKSIZE)

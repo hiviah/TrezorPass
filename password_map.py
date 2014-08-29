@@ -6,6 +6,10 @@ import hashlib
 from Crypto.Cipher import AES
 from Crypto import Random
 
+from backup import Backup
+
+from encoding import Magic, Padding
+
 ## On-disk format
 #  4 bytes	header "TZPW"
 #  4 bytes	data storage version, network order uint32_t
@@ -21,37 +25,6 @@ BLOCKSIZE = 16
 MACSIZE = 32
 KEYSIZE = 32
 
-class Magic(object):
-	"""
-	Few magic constant definitions so that we know which nodes to search
-	for keys.
-	"""
-	u = lambda fmt, s: struct.unpack(fmt, s)[0]
-	headerStr = "TZPW"
-	hdr = u("!I", headerStr)
-	
-	unlockNode = [hdr, u("!I", "ULCK")] # for unlocking wrapped AES-CBC key
-	groupNode  = [hdr, u("!I", "GRUP")] # for generating keys for individual password groups
-	#the unlock and backup key is written in this weird way to fit display nicely
-	unlockKey = "Decrypt master  key?" # string to derive wrapping key from
-	
-	backupNode = [hdr, u("!I", "BKUP")] # for unlocking wrapped backup private RSA key
-	backupKey = "Decrypt backup  key?" # string to derive backup wrapping key from
-	
-class Padding(object):
-	"""
-	PKCS#5 Padding for block cipher having 16-byte blocks
-	"""
-	BS = BLOCKSIZE
-	
-	@staticmethod
-	def pad(s):
-		return s + (Padding.BS - len(s) % Padding.BS) * chr(Padding.BS - len(s) % Padding.BS)
-	
-	@staticmethod
-	def unpad(s):
-		return s[0:-ord(s[-1])]
-	
 class PasswordGroup(object):
 	
 	def __init__(self):
@@ -82,7 +55,7 @@ class PasswordMap(object):
 		self.trezor = trezor
 		self.outerKey = None # outer AES-CBC key
 		self.outerIv = None  # IV for data blob encrypted with outerKey
-		self.encryptedBackupKey = None
+		self.backupKey = None
 	
 	def addGroup(self, groupName):
 		"""
@@ -123,9 +96,11 @@ class PasswordMap(object):
 				raise IOError("Corrupted disk format - bad backup key length")
 			lb = struct.unpack("!H", lb)[0]
 			
-			self.encryptedBackupKey = f.read(lb)
-			if len(self.encryptedBackupKey) != lb:
+			self.backupKey = Backup(self.trezor)
+			serializedBackup = f.read(lb)
+			if len(serializedBackup) != lb:
 				raise IOError("Corrupted disk format - not enough encrypted backup key bytes")
+			self.backupKey.deserialize(serializedBackup)
 			
 			ls = f.read(4)
 			if len(ls) != 4:
@@ -169,13 +144,14 @@ class PasswordMap(object):
 			f.write(struct.pack("!I", version))
 			f.write(wrappedKey)
 			f.write(self.outerIv)
-			serialized = cPickle.dumps(self.groups)
+			serialized = cPickle.dumps(self.groups, cPickle.HIGHEST_PROTOCOL)
 			encrypted = self.encryptOuter(serialized, self.outerIv)
 			
 			hmacDigest = hmac.new(self.outerKey, encrypted, hashlib.sha256).digest()
-			lb = struct.pack("!H", len(self.encryptedBackupKey))
+			serializedBackup = self.backupKey.serialize()
+			lb = struct.pack("!H", len(serializedBackup))
 			f.write(lb)
-			f.write(self.encryptedBackupKey)
+			f.write(serializedBackup)
 			l = struct.pack("!I", len(encrypted))
 			f.write(l)
 			f.write(encrypted)
@@ -195,7 +171,7 @@ class PasswordMap(object):
 		Pad plaintext with PKCS#5 and encrypt it.
 		"""
 		cipher = AES.new(key, AES.MODE_CBC, iv)
-		padded = Padding.pad(plaintext)
+		padded = Padding(BLOCKSIZE).pad(plaintext)
 		return cipher.encrypt(padded)
 	
 	def decryptOuter(self, ciphertext, iv):
@@ -210,7 +186,7 @@ class PasswordMap(object):
 		"""
 		cipher = AES.new(key, AES.MODE_CBC, iv)
 		plaintext = cipher.decrypt(ciphertext)
-		unpadded = Padding.unpad(plaintext)
+		unpadded = Padding(BLOCKSIZE).unpad(plaintext)
 		return unpadded
 	
 	def unwrapKey(self, wrappedOuterKey):
@@ -238,7 +214,7 @@ class PasswordMap(object):
 		"""
 		rnd = Random.new()
 		rndBlock = rnd.read(BLOCKSIZE)
-		padded = Padding.pad(rndBlock + password)
+		padded = Padding(BLOCKSIZE).pad(rndBlock + password)
 		ugroup = groupName.decode("utf-8")
 		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, ugroup, padded, ask_on_encrypt=False, ask_on_decrypt=True)
 		return ret
@@ -253,7 +229,7 @@ class PasswordMap(object):
 		"""
 		ugroup = groupName.decode("utf-8")
 		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, ugroup, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
-		prefixed = Padding.unpad(plain)
+		prefixed = Padding(BLOCKSIZE).unpad(plain)
 		password = prefixed[BLOCKSIZE:]
 		return password
 		
