@@ -136,7 +136,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionBackup">
    <property name="text">
-    <string>Backup</string>
+    <string>Backup/Export</string>
    </property>
   </action>
   <action name="actionQuit">

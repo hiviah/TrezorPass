@@ -110,8 +110,8 @@ class Backup(object):
 		"""
 		Decrypt RSA-OAEP encrypted password.
 		"""
-		cipher = PKCS1_OAEP.new(self.publicKey)
-		password = cipher.encrypt(encryptedPassword)
+		cipher = PKCS1_OAEP.new(privateKey)
+		password = cipher.decrypt(encryptedPassword)
 		
 		return password
 	

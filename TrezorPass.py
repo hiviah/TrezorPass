@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os.path
+import csv
 
 from PyQt4 import QtGui, QtCore
 from Crypto import Random
@@ -53,6 +54,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		shortcut.setContext(QtCore.Qt.WidgetShortcut)
 		
 		self.actionQuit.triggered.connect(self.close)
+		self.actionBackup.triggered.connect(self.saveBackup)
 		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
@@ -360,6 +362,38 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		"""
 		self.groupsFilter.setFilterFixedString(substring)
 		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
+	
+	def saveBackup(self):
+		"""
+		Uses backup key encrypted by Trezor to decrypt all passwords
+		at once and export them.
+		
+		Export format is CSV: group, key, password
+		"""
+		dialog = QtGui.QFileDialog(caption="Select backup export file",
+			filter="CVS files (*.csv)")
+		dialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
+		
+		res = dialog.exec_()
+		if not res:
+			return
+		
+		fname = q2s(dialog.selectedFiles()[0])
+		backupKey = self.pwMap.backupKey
+		privateKey = backupKey.unwrapPrivateKey()
+		
+		with file(fname, "w") as f:
+			writer = csv.writer(f)
+			sortedGroupNames = sorted(self.pwMap.groups.keys())
+			for groupName in sortedGroupNames:
+				group = self.pwMap.groups[groupName]
+				for entry in group.entries:
+					key, _, bkupPw = entry
+					password = backupKey.decryptPassword(bkupPw, privateKey)
+					csvEntry = (groupName, key, password)
+					writer.writerow(csvEntry)
+		
+		
 	
 class QtTrezorMixin(object):
 	"""
