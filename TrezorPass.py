@@ -525,8 +525,8 @@ try:
 	trezorChooser = TrezorChooser()
 	trezorChooseCallback = lambda deviceTuples: 0
 	trezor = trezorChooser.getDevice(trezorChooseCallback)
-except ConnectionError:
-	msgBox = QtGui.QMessageBox(text="Connection to Trezor failed")
+except (ConnectionError, RuntimeError), e:
+	msgBox = QtGui.QMessageBox(text="Connection to Trezor failed: " + e.message)
 	msgBox.exec_()
 	sys.exit(1)
 	
