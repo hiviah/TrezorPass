@@ -10,6 +10,8 @@ if original Trezor is misplaced (mnemonic and passphrase are required to recover
 
 Note that this is alpha software.
 
+![A few stored passwords](https://i.imgur.com/lboB2T3.png)
+
 # Security features
 
   * symmetric password encryption key never leaves the Trezor
