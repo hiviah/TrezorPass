@@ -94,4 +94,24 @@ class Backup(object):
 		(self.ephemeralIv, self.encryptedEphemeral,
 		     self.encryptedPrivate, publicDer) = unpickled
 		self.publicKey = RSA.importKey(publicDer)
+	
+	def encryptPassword(self, password):
+		"""
+		Encrypt password with RSA under OAEP padding and return it.
+		Password must be shorter than modulus length minus padding
+		length.
+		"""
+		cipher = PKCS1_OAEP.new(self.publicKey)
+		encrypted = cipher.encrypt(password)
 		
+		return encrypted
+	
+	def decryptPassword(self, encryptedPassword, privateKey):
+		"""
+		Decrypt RSA-OAEP encrypted password.
+		"""
+		cipher = PKCS1_OAEP.new(self.publicKey)
+		password = cipher.encrypt(encryptedPassword)
+		
+		return password
+	

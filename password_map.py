@@ -26,25 +26,36 @@ MACSIZE = 32
 KEYSIZE = 32
 
 class PasswordGroup(object):
+	"""
+	Holds data for one password group.
+	
+	Each entry has three values:
+	- key
+	- symetrically AES-CBC encrypted password unlockable only by Trezor
+	- RSA-encrypted password for creating backup of all password groups
+	"""
 	
 	def __init__(self):
-		self.pairs = []
+		self.entries = []
 	
-	def addPair(self, key, encryptedValue):
-		"""Add key-value pair"""
-		self.pairs.append((key, encryptedValue))
+	def addEntry(self, key, encryptedValue, backupValue):
+		"""Add key-value-backud entry"""
+		self.entries.append((key, encryptedValue, backupValue))
 	
-	def removePair(self, idx):
-		"""Remove pair at given index"""
-		self.pairs.pop(idx)
+	def removeEntry(self, idx):
+		"""Remove entry at given index"""
+		self.entries.pop(idx)
 	
-	def updatePair(self, idx, key, encryptedValue):
-		"""Update pair at index idx with given key and value"""
-		self.pairs[idx] = (key, encryptedValue)
+	def updateEntry(self, idx, key, encryptedValue, backupValue):
+		"""
+		Update pair at index idx with given key, value and
+		backup-encrypted password.
+		"""
+		self.entries[idx] = (key, encryptedValue, backupValue)
 		
-	def pair(self, idx):
-		"""Return pair with given index"""
-		return self.pairs[idx]
+	def entry(self, idx):
+		"""Return entry with given index"""
+		return self.entries[idx]
 
 class PasswordMap(object):
 	"""Storage of groups of passwords in memory"""

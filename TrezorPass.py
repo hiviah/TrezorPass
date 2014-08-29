@@ -153,7 +153,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsModel.appendRow(newItem)
 		self.pwMap.addGroup(q2s(groupName))
 		
-		#Make item's passwords loaded so new key-value pairs can be created
+		#Make item's passwords loaded so new key-value entries can be created
 		#right away - better from UX perspective.
 		self.loadPasswords(newItem)
 
@@ -191,7 +191,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		row = self.passwordTable.row(item)
 		self.passwordTable.removeRow(row)
 		group = self.pwMap.groups[self.selectedGroup]
-		group.removePair(row)
+		group.removeEntry(row)
 		
 		self.passwordTable.resizeRowsToContents()
 	
@@ -233,8 +233,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			return cached
 		else: #decrypt with Trezor
 			group = self.pwMap.groups[self.selectedGroup]
-			pwPair = group.pair(row)
-			encPw = pwPair[1]
+			pwEntry = group.entry(row)
+			encPw = pwEntry[1]
 			
 			decrypted = self.pwMap.decryptPassword(encPw, self.selectedGroup)
 		
@@ -250,7 +250,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.passwordTable.setItem(row, self.PASSWORD_IDX, item)
 	
 	def createPassword(self):
-		"""Slot to create key-value password pair.
+		"""Slot to create key-value password entry.
 		"""
 		if self.selectedGroup is None:
 			return
@@ -268,7 +268,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		plainPw = q2s(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
-		group.addPair(q2s(dialog.key()), encPw)
+		bkupPw = self.pwMap.backupKey.encryptPassword(plainPw)
+		group.addEntry(q2s(dialog.key()), encPw, bkupPw)
 		
 		self.cachePassword(rowCount, plainPw)
 		
@@ -280,8 +281,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		decrypted = self.cachedOrDecrypt(row)
 		
 		dialog = AddPasswordDialog()
-		pair = group.pair(row)
-		dialog.keyEdit.setText(s2q(pair[0]))
+		entry = group.entry(row)
+		dialog.keyEdit.setText(s2q(entry[0]))
 		dialog.pwEdit1.setText(s2q(decrypted))
 		dialog.pwEdit2.setText(s2q(decrypted))
 		
@@ -295,7 +296,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		plainPw = q2s(dialog.pw1())
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
-		group.updatePair(row, q2s(dialog.key()), encPw)
+		bkupPw = self.pwMap.backupKey.encryptPassword(plainPw)
+		group.updateEntry(row, q2s(dialog.key()), encPw, bkupPw)
 	
 		self.cachePassword(row, plainPw)
 		
@@ -329,11 +331,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		name = q2s(item.text())
 		self.selectedGroup = name
 		group = self.pwMap.groups[name]
-		self.passwordTable.setRowCount(len(group.pairs))
+		self.passwordTable.setRowCount(len(group.entries))
 		self.passwordTable.setColumnCount(2)
 		
 		i = 0
-		for key, encValue in group.pairs:
+		for key, encValue, bkupValue in group.entries:
 			item = QtGui.QTableWidgetItem(s2q(key))
 			pwItem = QtGui.QTableWidgetItem("*****")
 			self.passwordTable.setItem(i, self.KEY_IDX, item)
