@@ -54,3 +54,23 @@ class Backup(object):
 		self.encryptedEphemeral = self.trezor.encrypt_keyvalue(
 			Magic.backupNode, Magic.backupKey, ephemeral,
 			ask_on_encrypt=False, ask_on_decrypt=True)
+	
+	def unwrapPrivateKey(self):
+		"""
+		Decrypt private RSA key using self.encryptedEphemeral from
+		self.encryptedPrivate.
+		
+		Encrypted ephemeral key will be decrypted with Trezor.
+		
+		@returns RSA private key as Crypto.RSA._RSAobj
+		"""
+		ephemeral = self.trezor.decrypt_keyvalue(Magic.backupNode,
+			Magic.backupKey, self.encryptedEphemeral,
+			ask_on_encrypt=False, ask_on_decrypt=True)
+		
+		cipher = AES.new(ephemeral, AES.MODE_CBC, self.ephemeralIv)
+		padded = cipher.decrypt(self.encryptedPrivate)
+		privateDer = Padding.unpad(padded)
+		
+		privateKey = RSA.importKey(privateDer)
+		return privateKey
