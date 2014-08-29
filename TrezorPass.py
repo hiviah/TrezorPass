@@ -383,7 +383,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		privateKey = backupKey.unwrapPrivateKey()
 		
 		with file(fname, "w") as f:
-			writer = csv.writer(f)
+			csv.register_dialect("escaped", doublequote=False, escapechar='\\')
+			writer = csv.writer(f, dialect="escaped")
 			sortedGroupNames = sorted(self.pwMap.groups.keys())
 			for groupName in sortedGroupNames:
 				group = self.pwMap.groups[groupName]
