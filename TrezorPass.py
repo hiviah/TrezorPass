@@ -156,16 +156,17 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsModel.appendRow(newItem)
 		self.pwMap.addGroup(q2s(groupName))
 		
+		#make new item selected to save a few clicks
+		itemIdx = self.groupsModel.indexFromItem(newItem)
+		proxyIdx = self.groupsFilter.mapFromSource(itemIdx)
+		self.groupsTree.selectionModel().select(proxyIdx,
+			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
+		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
+		
 		#Make item's passwords loaded so new key-value entries can be created
 		#right away - better from UX perspective.
 		self.loadPasswords(newItem)
 
-		#make new item selected to save a few clicks
-		itemIdx = self.groupsModel.indexFromItem(newItem)
-		self.groupsTree.selectionModel().select(itemIdx,
-			QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
-		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
-	
 	def deleteGroup(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
 		msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
