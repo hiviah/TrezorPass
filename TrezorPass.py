@@ -35,6 +35,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.selectedGroup = None
 		
 		self.groupsModel = QtGui.QStandardItemModel()
+		self.groupsModel.setHorizontalHeaderLabels(["Password group"])
 		self.groupsFilter = QtGui.QSortFilterProxyModel()
 		self.groupsFilter.setSourceModel(self.groupsModel)
 		
