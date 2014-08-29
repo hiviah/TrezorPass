@@ -88,8 +88,6 @@ class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 		self.setupUi(self)
 		self.masterEdit1.textChanged.connect(self.validatePw)
 		self.masterEdit2.textChanged.connect(self.validatePw)
-		self.backupEdit1.textChanged.connect(self.validatePw)
-		self.backupEdit2.textChanged.connect(self.validatePw)
 	
 	
 	def pw1(self):
@@ -98,17 +96,11 @@ class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 	def pw2(self):
 		return self.masterEdit2.text()
 	
-	def backup1(self):
-		return self.backupEdit1.text()
-	
-	def backup2(self):
-		return self.backupEdit2.text()
-	
 	def validatePw(self):
 		"""
 		Enable OK button only if both master and backup are repeated
 		without typo.
 		"""
-		same = self.pw1() == self.pw2() and self.backup1() == self.backup2()
+		same = self.pw1() == self.pw2()
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
 		button.setEnabled(same)

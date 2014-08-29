@@ -472,19 +472,11 @@ def initializeStorage(trezor):
 		sys.exit(4)
 		
 	masterPassphrase = q2s(dialog.pw1())
-	backupPassphrase = q2s(dialog.backup1())
 	
-	trezor.prefillPassphrase(backupPassphrase)
+	trezor.prefillPassphrase(masterPassphrase)
 	backup = Backup(trezor)
 	backup.generate()
 	
-	#generate private-public RSA keypair, encrypt private
-	trezor.prefillPassphrase(masterPassphrase)
-	
-	#Do one encryption to force Trezor to request the passphrase and create
-	#a session. Seems there's no cleaner way to do this.
-	bogus = "0123456789abcdef"
-	trezor.encrypt_keyvalue([0], "prefill", bogus, ask_on_encrypt=False, ask_on_decrypt=True)
 	
 
 app = QtGui.QApplication(sys.argv)
