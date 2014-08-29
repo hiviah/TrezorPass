@@ -6,7 +6,7 @@ import csv
 from PyQt4 import QtGui, QtCore
 from Crypto import Random
 
-from trezorlib.client import BaseClient, ProtocolMixin
+from trezorlib.client import BaseClient, ProtocolMixin, CallException
 from trezorlib.transport import ConnectionError
 from trezorlib.transport_hid import HidTransport
 from trezorlib import messages_pb2 as proto
@@ -245,7 +245,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def showPassword(self, item):
 		#check if this password has been decrypted, use cached version
 		row = self.passwordTable.row(item)
-		decrypted = self.cachedOrDecrypt(row)
+		try:
+			decrypted = self.cachedOrDecrypt(row)
+		except CallException:
+			return
 		item = QtGui.QTableWidgetItem(s2q(decrypted))
 		
 		self.cachePassword(row, decrypted)
@@ -280,7 +283,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def editPassword(self, item):
 		row = self.passwordTable.row(item)
 		group = self.pwMap.groups[self.selectedGroup]
-		decrypted = self.cachedOrDecrypt(row)
+		try:
+			decrypted = self.cachedOrDecrypt(row)
+		except CallException:
+			return
 		
 		dialog = AddPasswordDialog()
 		entry = group.entry(row)
@@ -319,7 +325,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	
 	def copyPasswordFromItem(self, item):
 		row = self.passwordTable.row(item)
-		decrypted = self.cachedOrDecrypt(row)
+		try:
+			decrypted = self.cachedOrDecrypt(row)
+		except CallException:
+			return
 		
 		clipboard = QtGui.QApplication.clipboard()
 		clipboard.setText(s2q(decrypted))
@@ -380,7 +389,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		fname = q2s(dialog.selectedFiles()[0])
 		backupKey = self.pwMap.backupKey
-		privateKey = backupKey.unwrapPrivateKey()
+		try:
+			privateKey = backupKey.unwrapPrivateKey()
+		except CallException:
+			return
 		
 		with file(fname, "w") as f:
 			csv.register_dialect("escaped", doublequote=False, escapechar='\\')
@@ -544,6 +556,9 @@ pwMap = password_map.PasswordMap(trezor)
 if os.path.isfile("trezorpass.pwdb"):
 	try:
 		pwMap.load("trezorpass.pwdb")
+	except CallException:
+		#button cancel on Trezor, so exit
+		sys.exit(6)
 	except Exception, e:
 		msgBox = QtGui.QMessageBox(text="Could not decrypt passwords: " + e.message)
 		msgBox.exec_()
