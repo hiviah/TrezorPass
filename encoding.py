@@ -29,7 +29,7 @@ class Magic(object):
 	
 class Padding(object):
 	"""
-	PKCS#5 Padding for block cipher having 16-byte blocks
+	PKCS#7 Padding for block cipher having 16-byte blocks
 	"""
 	
 	def __init__(self, blocksize):
