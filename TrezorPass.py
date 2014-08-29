@@ -379,8 +379,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		Export format is CSV: group, key, password
 		"""
-		dialog = QtGui.QFileDialog(caption="Select backup export file",
-			filter="CVS files (*.csv)")
+		dialog = QtGui.QFileDialog(self, "Select backup export file",
+			"", "CVS files (*.csv)")
 		dialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
 		
 		res = dialog.exec_()
