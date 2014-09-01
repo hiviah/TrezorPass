@@ -6,7 +6,7 @@ import csv
 from PyQt4 import QtGui, QtCore
 from Crypto import Random
 
-from trezorlib.client import BaseClient, ProtocolMixin, CallException
+from trezorlib.client import BaseClient, ProtocolMixin, CallException, PinException
 from trezorlib.transport import ConnectionError
 from trezorlib.transport_hid import HidTransport
 from trezorlib import messages_pb2 as proto
@@ -18,7 +18,7 @@ from encoding import q2s, s2q
 from backup import Backup
 
 from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
-	InitializeDialog
+	InitializeDialog, EnterPinDialog
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
@@ -435,6 +435,14 @@ class QtTrezorMixin(object):
 		
 		return proto.PassphraseAck(passphrase=passphrase)
 	
+	def callback_PinMatrixRequest(self, msg):
+		dialog = EnterPinDialog()
+		if not dialog.exec_():
+			sys.exit(7)
+		
+		pin = q2s(dialog.pin())
+		return proto.PinMatrixAck(pin=pin)
+
 	def prefillPassphrase(self, passphrase):
 		"""
 		Instead of asking for passphrase, use this one
@@ -558,6 +566,10 @@ pwMap = password_map.PasswordMap(trezor)
 if os.path.isfile("trezorpass.pwdb"):
 	try:
 		pwMap.load("trezorpass.pwdb")
+	except PinException:
+		msgBox = QtGui.QMessageBox(text="Invalid PIN")
+		msgBox.exec_()
+		sys.exit(8)
 	except CallException:
 		#button cancel on Trezor, so exit
 		sys.exit(6)

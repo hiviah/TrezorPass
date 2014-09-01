@@ -4,6 +4,7 @@ from ui_addgroup_dialog import Ui_AddGroupDialog
 from ui_trezor_passphrase_dialog import Ui_TrezorPassphraseDialog
 from ui_add_password_dialog import Ui_AddPasswordDialog
 from ui_initialize_dialog import Ui_InitializeDialog
+from ui_enter_pin_dialog import Ui_EnterPinDialog
 
 class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 	
@@ -104,3 +105,29 @@ class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 		same = self.pw1() == self.pw2()
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
 		button.setEnabled(same)
+
+class EnterPinDialog(QtGui.QDialog, Ui_EnterPinDialog):
+	
+	def __init__(self):
+		QtGui.QDialog.__init__(self)
+		self.setupUi(self)
+		
+		self.pb1.clicked.connect(self.pinpadPressed)
+		self.pb2.clicked.connect(self.pinpadPressed)
+		self.pb3.clicked.connect(self.pinpadPressed)
+		self.pb4.clicked.connect(self.pinpadPressed)
+		self.pb5.clicked.connect(self.pinpadPressed)
+		self.pb6.clicked.connect(self.pinpadPressed)
+		self.pb7.clicked.connect(self.pinpadPressed)
+		self.pb8.clicked.connect(self.pinpadPressed)
+		self.pb9.clicked.connect(self.pinpadPressed)
+	
+	def pin(self):
+		return self.pinEdit.text()
+	
+	def pinpadPressed(self):
+		sender = self.sender()
+		objName = sender.objectName()
+		digit = objName[-1]
+		self.pinEdit.setText(self.pinEdit.text() + digit)
+	
