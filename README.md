@@ -63,3 +63,6 @@ beginning to make sure IV does not repeat for the actual message/password in
 AES-CBC and does not produce same prefix in case of identical passwords in
 group.
 
+# Where is password database stored
+
+It is stored in file named `trezorpass.pwdb` in current directory.
