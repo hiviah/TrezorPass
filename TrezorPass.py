@@ -2,6 +2,7 @@
 import sys
 import os.path
 import csv
+import functools
 
 from PyQt4 import QtGui, QtCore
 from Crypto import Random
@@ -516,6 +517,25 @@ class TrezorChooser(object):
 		return deviceTuples[chosenDevice][1]
 		
 
+class AsyncCall(QtCore.QThread):
+	"""
+	Qt threaded wrapper for async call that e.g. requires user take action
+	by pressing Trezor button. We want to execute asynchronously so that
+	GUI is responsive.
+	"""
+	
+	def __init__(self, fn):
+		"""
+		Initialize with callable function fn that will be called inside
+		thread.
+		"""
+		QtCore.QThread.__init__(self)
+		self.fn = fn
+		self.result = None
+	
+	def run(self):
+		self.result = self.fn()
+	
 def initializeStorage(trezor, pwMap):
 	"""
 	Initialize new encrypted password file, ask for master passphrase.
@@ -565,7 +585,15 @@ pwMap = password_map.PasswordMap(trezor)
 
 if os.path.isfile("trezorpass.pwdb"):
 	try:
-		pwMap.load("trezorpass.pwdb")
+		ev = QtCore.QEventLoop()
+		t = AsyncCall(functools.partial(pwMap.load, "trezorpass.pwdb"))
+		t.finished.connect(ev.quit)
+		t.start()
+		l = QtCore.QLabel("Confirm on Trezor")
+		l.show()
+		q.exec_()
+		l.close()
+		#pwMap.load("trezorpass.pwdb")
 	except PinException:
 		msgBox = QtGui.QMessageBox(text="Invalid PIN")
 		msgBox.exec_()
