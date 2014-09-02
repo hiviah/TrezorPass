@@ -249,7 +249,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		#check if this password has been decrypted, use cached version
 		row = self.passwordTable.row(item)
 		try:
-			decrypted = self.cachedOrDecrypt(row)
+			async = TrezorAsyncCall("Confirm on Trezor",
+				functools.partial(self.cachedOrDecrypt, row))
+			decrypted = async.run()
+			if decrypted is None:
+				return
 		except CallException:
 			return
 		item = QtGui.QTableWidgetItem(s2q(decrypted))
@@ -287,7 +291,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		row = self.passwordTable.row(item)
 		group = self.pwMap.groups[self.selectedGroup]
 		try:
-			decrypted = self.cachedOrDecrypt(row)
+			async = TrezorAsyncCall("Confirm on Trezor",
+				functools.partial(self.cachedOrDecrypt, row))
+			decrypted = async.run()
+			if decrypted is None:
+				return
 		except CallException:
 			return
 		
@@ -329,7 +337,11 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	def copyPasswordFromItem(self, item):
 		row = self.passwordTable.row(item)
 		try:
-			decrypted = self.cachedOrDecrypt(row)
+			async = TrezorAsyncCall("Confirm on Trezor",
+				functools.partial(self.cachedOrDecrypt, row))
+			decrypted = async.run()
+			if decrypted is None:
+				return
 		except CallException:
 			return
 		
@@ -534,7 +546,37 @@ class AsyncCall(QtCore.QThread):
 		self.result = None
 	
 	def run(self):
-		self.result = self.fn()
+		try:
+			self.result = self.fn()
+		except CallException:
+			pass #intended for user pressing cancel on Trezor
+	
+class TrezorAsyncCall(object):
+	"""
+	Call function in separate thread and display a message box with prompt.
+	Intended for calling Trezor functions that block (require confirmation)
+	while keeping GUI alive.
+	"""
+	def __init__(self, text, fn):
+		self.text = text
+		self.fn = fn
+	
+	def run(self):
+		"""
+		Result may be None if user closes the message box or
+		Trezor CallException is thrown.
+		"""
+		ev = QtCore.QEventLoop()
+		t = AsyncCall(self.fn)
+		t.finished.connect(ev.quit)
+		t.start()
+		msgBox = QtGui.QMessageBox(text=self.text)
+		msgBox.setStandardButtons(QtGui.QMessageBox.NoButton)
+		msgBox.show()
+		ev.exec_()
+		msgBox.close()
+		
+		return t.result
 	
 def initializeStorage(trezor, pwMap):
 	"""
@@ -585,15 +627,7 @@ pwMap = password_map.PasswordMap(trezor)
 
 if os.path.isfile("trezorpass.pwdb"):
 	try:
-		ev = QtCore.QEventLoop()
-		t = AsyncCall(functools.partial(pwMap.load, "trezorpass.pwdb"))
-		t.finished.connect(ev.quit)
-		t.start()
-		l = QtCore.QLabel("Confirm on Trezor")
-		l.show()
-		q.exec_()
-		l.close()
-		#pwMap.load("trezorpass.pwdb")
+		pwMap.load("trezorpass.pwdb")
 	except PinException:
 		msgBox = QtGui.QMessageBox(text="Invalid PIN")
 		msgBox.exec_()
