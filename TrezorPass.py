@@ -509,9 +509,7 @@ class TrezorChooser(object):
 				transport = HidTransport(device)
 				client = QtTrezorClient(transport)
 				label = client.features.label and client.features.label or "<no label>"
-				
-				#this is ugly, but there's no clean API
-				transport._close()
+				client.close()
 				
 				deviceMap[device[0]] = label
 			except IOError:
