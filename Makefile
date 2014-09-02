@@ -5,6 +5,7 @@ UI_GENERATED := \
     ui_add_password_dialog.py \
     ui_initialize_dialog.py \
     ui_enter_pin_dialog.py \
+    ui_trezor_chooser_dialog.py \
     #end of UI_GENERATED
 
 all: $(UI_GENERATED)

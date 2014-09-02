@@ -18,7 +18,7 @@ from encoding import q2s, s2q
 from backup import Backup
 
 from dialogs import AddGroupDialog, TrezorPassphraseDialog, AddPasswordDialog, \
-	InitializeDialog, EnterPinDialog
+	InitializeDialog, EnterPinDialog, TrezorChooserDialog
 
 class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	"""Main window for the application with groups and password lists"""
@@ -461,17 +461,17 @@ class TrezorChooser(object):
 	def __init__(self):
 		pass
 	
-	def getDevice(self, callback):
+	def getDevice(self):
 		"""
-		Get one from available devices. Callback chooses index
-		of device, see chooseDevice callback.
+		Get one from available devices. Widget will be shown if more
+		devices are available.
 		"""
 		devices = self.enumerateHIDDevices()
 
 		if not devices:
 			return None
 		
-		transport = self.chooseDevice(devices, callback)
+		transport = self.chooseDevice(devices)
 		client = QtTrezorClient(transport)
 
 		return client
@@ -482,11 +482,15 @@ class TrezorChooser(object):
 
 		return devices
 
-	def chooseDevice(self, devices, callback):
+	def chooseDevice(self, devices):
 		"""
-		Choose device from enumerated list. Callback gets list of
-		tuples (index, string) which denote labels of connected trezors.
-		The callback returns index of device that should be used.
+		Choose device from enumerated list. If there's only one Trezor,
+		that will be chosen.
+		
+		If there are multiple Trezors, diplays a widget with list
+		of Trezor devices to choose from.
+		
+		@returns HidTransport object of selected device
 		"""
 		if not len(devices):
 			raise RuntimeError("No Trezor connected!")
@@ -497,23 +501,32 @@ class TrezorChooser(object):
 			except IOError:
 				raise RuntimeError("Trezor is currently in use")
 		
-		deviceTuples = []
 		
-		for idx, device in enumerate(devices):
+		#maps deviceId string to device label
+		deviceMap = {}
+		for device in devices:
 			try:
-				transport = HidTransport(devices[0])
+				transport = HidTransport(device)
 				client = QtTrezorClient(transport)
 				label = client.features.label and client.features.label or "<no label>"
-				deviceTuples += [(idx, label)]
+				
+				#this is ugly, but there's no clean API
+				transport._close()
+				
+				deviceMap[device[0]] = label
 			except IOError:
 				#device in use, do not offer as choice
 				continue
 				
-		if not deviceTuples:
+		if not deviceMap:
 			raise RuntimeError("All connected Trezors are in use!")
 		
-		chosenDevice = callback(deviceTuples)
-		return deviceTuples[chosenDevice][1]
+		dialog = TrezorChooserDialog(deviceMap)
+		if not dialog.exec_():
+			sys.exit(9)
+		
+		deviceStr = dialog.chosenDeviceStr()
+		return HidTransport([deviceStr, None])
 		
 
 def initializeStorage(trezor, pwMap):
@@ -545,8 +558,7 @@ app = QtGui.QApplication(sys.argv)
 
 try:
 	trezorChooser = TrezorChooser()
-	trezorChooseCallback = lambda deviceTuples: 0
-	trezor = trezorChooser.getDevice(trezorChooseCallback)
+	trezor = trezorChooser.getDevice()
 except (ConnectionError, RuntimeError), e:
 	msgBox = QtGui.QMessageBox(text="Connection to Trezor failed: " + e.message)
 	msgBox.exec_()

@@ -20,4 +20,5 @@ FORMS    += mainwindow.ui \
     trezor_passphrase_dialog.ui \
     add_password_dialog.ui \
     initialize_dialog.ui \
-    enter_pin_dialog.ui
+    enter_pin_dialog.ui \
+    trezor_chooser_dialog.ui

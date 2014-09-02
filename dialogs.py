@@ -5,6 +5,7 @@ from ui_trezor_passphrase_dialog import Ui_TrezorPassphraseDialog
 from ui_add_password_dialog import Ui_AddPasswordDialog
 from ui_initialize_dialog import Ui_InitializeDialog
 from ui_enter_pin_dialog import Ui_EnterPinDialog
+from ui_trezor_chooser_dialog import Ui_TrezorChooserDialog
 
 class AddGroupDialog(QtGui.QDialog, Ui_AddGroupDialog):
 	
@@ -130,4 +131,29 @@ class EnterPinDialog(QtGui.QDialog, Ui_EnterPinDialog):
 		objName = sender.objectName()
 		digit = objName[-1]
 		self.pinEdit.setText(self.pinEdit.text() + digit)
+	
+class TrezorChooserDialog(QtGui.QDialog, Ui_TrezorChooserDialog):
+	
+	def __init__(self, deviceMap):
+		"""
+		Create dialog and fill it with labels from deviceMap
+		
+		@param deviceMap: dict device string -> device label
+		"""
+		QtGui.QDialog.__init__(self)
+		self.setupUi(self)
+		
+		for deviceStr, label in deviceMap.items():
+			item = QtGui.QListWidgetItem(label)
+			item.setData(QtCore.Qt.UserRole, QtCore.QVariant(deviceStr))
+			self.trezorList.addItem(item)
+		self.trezorList.setCurrentRow(0)
+	
+	def chosenDeviceStr(self):
+		"""
+		Returns device string of chosen Trezor
+		"""
+		itemData = self.trezorList.currentItem().data(QtCore.Qt.UserRole)
+		deviceStr = str(itemData.toString())
+		return deviceStr
 	
