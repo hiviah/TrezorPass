@@ -10,6 +10,8 @@ if original Trezor is misplaced (mnemonic and passphrase are required to recover
 
 Note that this is alpha software.
 
+Trezor must be already set up to use passphrase.
+
 ![A few stored passwords](https://i.imgur.com/lboB2T3.png)
 
 # Security features
