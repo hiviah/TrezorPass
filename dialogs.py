@@ -88,9 +88,11 @@ class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 	def __init__(self):
 		QtGui.QDialog.__init__(self)
 		self.setupUi(self)
-		self.masterEdit1.textChanged.connect(self.validatePw)
-		self.masterEdit2.textChanged.connect(self.validatePw)
-	
+		self.masterEdit1.textChanged.connect(self.validate)
+		self.masterEdit2.textChanged.connect(self.validate)
+		self.pwFileEdit.textChanged.connect(self.validate)
+		self.pwFileButton.clicked.connect(self.selectPwFile)
+		self.validate()
 	
 	def pw1(self):
 		return self.masterEdit1.text()
@@ -98,14 +100,35 @@ class InitializeDialog(QtGui.QDialog, Ui_InitializeDialog):
 	def pw2(self):
 		return self.masterEdit2.text()
 	
-	def validatePw(self):
+	def pwFile(self):
+		return self.pwFileEdit.text()
+	
+	def validate(self):
 		"""
 		Enable OK button only if both master and backup are repeated
-		without typo.
+		without typo and some password file is selected.
 		"""
 		same = self.pw1() == self.pw2()
+		fileSelected = not self.pwFileEdit.text().isEmpty()
 		button = self.buttonBox.button(QtGui.QDialogButtonBox.Ok)
-		button.setEnabled(same)
+		button.setEnabled(same and fileSelected)
+	
+	def selectPwFile(self):
+		"""
+		Show file dialog and return file user chose to store the
+		encrypted password database.
+		"""
+		path = QtCore.QDir.currentPath()
+		dialog = QtGui.QFileDialog(self, "Select password database file",
+			path, "(*.pwdb)")
+		dialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
+		
+		res = dialog.exec_()
+		if not res:
+			return
+		
+		fname = dialog.selectedFiles()[0]
+		self.pwFileEdit.setText(fname)
 
 class EnterPinDialog(QtGui.QDialog, Ui_EnterPinDialog):
 	

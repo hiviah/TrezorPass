@@ -570,7 +570,22 @@ class TrezorChooser(object):
 		return HidTransport([deviceStr, None])
 		
 
-def initializeStorage(trezor, pwMap):
+class Settings(object):
+	"""
+	Settings for password database location
+	"""
+	
+	def __init__(self):
+		self.dbFilename = None
+		self.settings = QtCore.QSettings("ConstructibleUniverse", "TrezorPass")
+		fname = self.settings.value("database/filename")
+		if fname.isValid():
+			self.dbFilename = q2s(fname.toString())
+	
+	def store(self):
+		self.settings.setValue("database/filename", s2q(self.dbFilename))
+	
+def initializeStorage(trezor, pwMap, settings):
 	"""
 	Initialize new encrypted password file, ask for master passphrase.
 	
@@ -582,6 +597,7 @@ def initializeStorage(trezor, pwMap):
 	
 	@param trezor: Trezor client
 	@param pwMap: PasswordMap where to put encrypted backupKeys
+	@param settings: Settings object to store password database location
 	"""
 	dialog = InitializeDialog()
 	if not dialog.exec_():
@@ -593,6 +609,8 @@ def initializeStorage(trezor, pwMap):
 	backup = Backup(trezor)
 	backup.generate()
 	pwMap.backupKey = backup
+	settings.dbFilename = q2s(dialog.pwFile())
+	settings.store()
 	
 
 app = QtGui.QApplication(sys.argv)
@@ -615,11 +633,11 @@ trezor.clear_session()
 #print "label:", trezor.features.label
 
 pwMap = password_map.PasswordMap(trezor)
-dbFilename = "trezorpass.pwdb"
+settings = Settings()
 
-if os.path.isfile(dbFilename):
+if settings.dbFilename and os.path.isfile(settings.dbFilename):
 	try:
-		pwMap.load(dbFilename)
+		pwMap.load(settings.dbFilename)
 	except PinException:
 		msgBox = QtGui.QMessageBox(text="Invalid PIN")
 		msgBox.exec_()
@@ -633,14 +651,14 @@ if os.path.isfile(dbFilename):
 		sys.exit(5)
 		
 else:
-	initializeStorage(trezor, pwMap)
+	initializeStorage(trezor, pwMap, settings)
 	
 rng = Random.new()
 pwMap.outerIv = rng.read(password_map.BLOCKSIZE)
 pwMap.outerKey = rng.read(password_map.KEYSIZE)
 pwMap.encryptedBackupKey = ""
 
-mainWindow = MainWindow(pwMap, dbFilename)
+mainWindow = MainWindow(pwMap, settings.dbFilename)
 mainWindow.show()
 retCode = app.exec_()
 
