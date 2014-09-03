@@ -27,12 +27,18 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 	PASSWORD_IDX = 1 #column where password is shown in password table
 	CACHE_IDX = 0 #column of QWidgetItem in whose data we cache decrypted passwords
 	
-	def __init__(self, pwMap):
+	def __init__(self, pwMap, dbFilename):
+		"""
+		@param pwMap: a PasswordMap instance with encrypted passwords
+		@param dbFilename: file name for saving pwMap
+		"""
 		QtGui.QMainWindow.__init__(self)
 		self.setupUi(self)
 		
 		self.pwMap = pwMap
 		self.selectedGroup = None
+		self.modified = False #modified flag "Save?" question on exit
+		self.dbFilename = dbFilename
 		
 		self.groupsModel = QtGui.QStandardItemModel()
 		self.groupsModel.setHorizontalHeaderLabels(["Password group"])
@@ -56,6 +62,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		
 		self.actionQuit.triggered.connect(self.close)
 		self.actionBackup.triggered.connect(self.saveBackup)
+		self.actionSave.triggered.connect(self.saveDatabase)
+		self.actionSave.setShortcut(QtGui.QKeySequence("Ctrl+S"))
 		
 		headerKey = QtGui.QTableWidgetItem("Key");
 		headerValue = QtGui.QTableWidgetItem("Value");
@@ -70,6 +78,14 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 			item = QtGui.QStandardItem(s2q(groupName))
 			self.groupsModel.appendRow(item)
 		self.groupsTree.sortByColumn(0, QtCore.Qt.AscendingOrder)
+	
+	def setModified(self, modified):
+		"""
+		Sets the modified flag so that user is notified when exiting
+		with unsaved changes.
+		"""
+		self.modified = modified
+		self.setWindowTitle("TrezorPass" + "*" * int(self.modified))
 	
 	def showGroupsContextMenu(self, point):
 		"""
@@ -166,6 +182,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		#Make item's passwords loaded so new key-value entries can be created
 		#right away - better from UX perspective.
 		self.loadPasswords(newItem)
+		
+		self.setModified(True)
 
 	def deleteGroup(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
@@ -183,6 +201,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.groupsModel.takeRow(itemIdx.row())
 		self.passwordTable.setRowCount(0)
 		self.groupsTree.clearSelection()
+		
+		self.setModified(True)
 	
 	def deletePassword(self, item):
 		msgBox = QtGui.QMessageBox(text="Are you sure about delete?")
@@ -198,6 +218,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		group.removeEntry(row)
 		
 		self.passwordTable.resizeRowsToContents()
+		self.setModified(True)
 	
 	def cachePassword(self, row, password):
 		"""
@@ -281,6 +302,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		self.cachePassword(rowCount, plainPw)
 		
 		self.passwordTable.resizeRowsToContents()
+		self.setModified(True)
 	
 	def editPassword(self, item):
 		row = self.passwordTable.row(item)
@@ -308,9 +330,10 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 		encPw = self.pwMap.encryptPassword(plainPw, self.selectedGroup)
 		bkupPw = self.pwMap.backupKey.encryptPassword(plainPw)
 		group.updateEntry(row, q2s(dialog.key()), encPw, bkupPw)
-	
-		self.cachePassword(row, plainPw)
 		
+		self.cachePassword(row, plainPw)
+		self.setModified(True)
+	
 	def copyPasswordFromSelection(self):
 		"""
 		Copy selected password to clipboard. Password is decrypted if
@@ -407,8 +430,28 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 					password = backupKey.decryptPassword(bkupPw, privateKey)
 					csvEntry = (groupName, key, password)
 					writer.writerow(csvEntry)
-		
-		
+	
+	def saveDatabase(self):
+		"""
+		Save main database file.
+		"""
+		self.pwMap.save(self.dbFilename)
+		self.setModified(False)
+	
+	def closeEvent(self, event):
+		if self.modified:
+			msgBox = QtGui.QMessageBox(text="Password database is modified. Save on exit?")
+			msgBox.setStandardButtons(QtGui.QMessageBox.Yes |
+				QtGui.QMessageBox.No | QtGui.QMessageBox.Cancel )
+			reply = msgBox.exec_()
+			
+			if not reply or reply == QtGui.QMessageBox.Cancel:
+				event.ignore()
+				return
+			elif reply == QtGui.QMessageBox.Yes:
+				self.saveDatabase()
+			
+		event.accept()
 	
 class QtTrezorMixin(object):
 	"""
@@ -572,10 +615,11 @@ trezor.clear_session()
 #print "label:", trezor.features.label
 
 pwMap = password_map.PasswordMap(trezor)
+dbFilename = "trezorpass.pwdb"
 
-if os.path.isfile("trezorpass.pwdb"):
+if os.path.isfile(dbFilename):
 	try:
-		pwMap.load("trezorpass.pwdb")
+		pwMap.load(dbFilename)
 	except PinException:
 		msgBox = QtGui.QMessageBox(text="Invalid PIN")
 		msgBox.exec_()
@@ -596,10 +640,9 @@ pwMap.outerIv = rng.read(password_map.BLOCKSIZE)
 pwMap.outerKey = rng.read(password_map.KEYSIZE)
 pwMap.encryptedBackupKey = ""
 
-mainWindow = MainWindow(pwMap)
+mainWindow = MainWindow(pwMap, dbFilename)
 mainWindow.show()
 retCode = app.exec_()
 
-pwMap.save("trezorpass.pwdb")
 
 sys.exit(retCode)

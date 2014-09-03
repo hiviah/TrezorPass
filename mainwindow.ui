@@ -119,6 +119,7 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionSave"/>
     <addaction name="actionBackup"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -142,6 +143,11 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save database</string>
    </property>
   </action>
  </widget>
