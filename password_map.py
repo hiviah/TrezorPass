@@ -216,32 +216,28 @@ class PasswordMap(object):
 		
 	def encryptPassword(self, password, groupName):
 		"""
-		Encrypt a password. Does PKCS#5 padding before encryption. Inserts
-		random block of data to sidestep IV issue in CipherKeyValue in
-		Trezor.
+		Encrypt a password. Does PKCS#5 padding before encryption.
+		Store IV as first block.
 		
 		@param groupName key that will be shown to user on Trezor and
 			used to encrypt the password. A string in utf-8
 		"""
 		rnd = Random.new()
 		rndBlock = rnd.read(BLOCKSIZE)
-		padded = Padding(BLOCKSIZE).pad(rndBlock + password)
+		padded = Padding(BLOCKSIZE).pad(password)
 		ugroup = groupName.decode("utf-8")
-		ret = self.trezor.encrypt_keyvalue(Magic.groupNode, ugroup, padded, ask_on_encrypt=False, ask_on_decrypt=True)
+		ret = rndBlock + self.trezor.encrypt_keyvalue(Magic.groupNode, ugroup, padded, ask_on_encrypt=False, ask_on_decrypt=True, iv=rndBlock)
 		return ret
 		
 	def decryptPassword(self, encryptedPassword, groupName):
 		"""
-		Decrypt a password. After decryption strips PKCS#5 padding and
-		discards first block.
+		Decrypt a password. First block is IV. After decryption strips PKCS#5 padding.
 		
 		@param groupName key that will be shown to user on Trezor and
 			was used to encrypt the password. A string in utf-8.
 		"""
 		ugroup = groupName.decode("utf-8")
-		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, ugroup, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True)
-		prefixed = Padding(BLOCKSIZE).unpad(plain)
-		password = prefixed[BLOCKSIZE:]
+		iv, encryptedPassword = encryptedPassword[:BLOCKSIZE], encryptedPassword[BLOCKSIZE:]
+		plain = self.trezor.decrypt_keyvalue(Magic.groupNode, ugroup, encryptedPassword, ask_on_encrypt=False, ask_on_decrypt=True, iv=iv)
+		password = Padding(BLOCKSIZE).unpad(plain)
 		return password
-		
-		
