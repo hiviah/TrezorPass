@@ -56,12 +56,3 @@ of Trezor that always requires button confirmation on device to decrypt. Second
 encryption is done to public RSA key, whose private counterpart is encrypted
 with Trezor. Backup requires private RSA to be decrypted and then used to decrypt
 the passwords.
-
-# Crypto quirks
-
-The CipherKeyValue in Trezor's implementation derives IV from key instead of
-taking IV as a parameter. As a workaround, we put in a random block at the
-beginning to make sure IV does not repeat for the actual message/password in
-AES-CBC and does not produce same prefix in case of identical passwords in
-group.
-
